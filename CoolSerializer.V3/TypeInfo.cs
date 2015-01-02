@@ -48,9 +48,12 @@ namespace CoolSerializer.V3
 
     public class ByValFieldInfo : FieldInfo
     {
-        public ByValFieldInfo(TypeInfo fullTypeInfo, string name) : base(FieldType.ObjectByVal, name)
+        public ByValFieldInfo(TypeInfo typeInfo, string name) : base(FieldType.ObjectByVal, name)
         {
+            TypeInfo = typeInfo;
         }
+
+        public TypeInfo TypeInfo { get; private set; }
     }
     public enum FieldType : byte
     {

@@ -114,7 +114,15 @@ namespace CoolSerializer.V3
             {
                 var type = (FieldType) mBinaryReader.ReadByte();
                 var fieldName = mBinaryReader.ReadString();
-                fields[i] = new FieldInfo(type,fieldName);
+                if (type == FieldType.ObjectByVal)
+                {
+                    var typeDefinition = ReadTypeInfo();
+                    fields[i] = new ByValFieldInfo(typeDefinition,fieldName);
+                }
+                else
+                {
+                    fields[i] = new FieldInfo(type, fieldName);
+                }
             }
 
             return new TypeInfo(guid,name,fields);

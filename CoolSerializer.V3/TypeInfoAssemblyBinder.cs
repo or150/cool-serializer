@@ -23,6 +23,10 @@ namespace CoolSerializer.V3
 
         private IBoundedFieldInfo CreateBoundedFieldInfo(Type objectType, FieldInfo fieldInfo)
         {
+            if (fieldInfo.Type == FieldType.ObjectByVal)
+            {
+                return new ByValBoundedFieldInfo(objectType,fieldInfo,this);
+            }
             return new BoundedFieldInfo(objectType,fieldInfo);
         }
     }
@@ -56,6 +60,11 @@ namespace CoolSerializer.V3
         Expression GetSetExpression(Expression graphParam, Expression graphFieldValue);
     }
 
+    public interface IByValBoundedFieldInfo : IBoundedFieldInfo
+    {
+        IBoundedTypeInfo TypeInfo { get; }
+    }
+
     public class BoundedFieldInfo : IBoundedFieldInfo
     {
         private readonly PropertyInfo mInfo;
@@ -84,5 +93,16 @@ namespace CoolSerializer.V3
         {
             return Expression.Assign(Expression.MakeMemberAccess(graphParam, mInfo), graphFieldValue);
         }
+    }
+
+    public class ByValBoundedFieldInfo : BoundedFieldInfo, IByValBoundedFieldInfo
+    {
+        public ByValBoundedFieldInfo(Type objectType, FieldInfo fieldInfo, TypeInfoAssemblyBinder typeInfoAssemblyBinder)
+            : base(objectType, fieldInfo)
+        {
+            TypeInfo = typeInfoAssemblyBinder.Provide(((ByValFieldInfo) fieldInfo).TypeInfo);
+        }
+
+        public IBoundedTypeInfo TypeInfo { get; private set; }
     }
 }

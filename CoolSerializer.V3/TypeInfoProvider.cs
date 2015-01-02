@@ -15,7 +15,20 @@ namespace CoolSerializer.V3
         {
             return type
                 .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Select(p => new FieldInfo(p.PropertyType.GetRawType(), p.Name)).ToArray();
+                .Select(CreateFieldInfo).ToArray();
+        }
+
+        private FieldInfo CreateFieldInfo(PropertyInfo p)
+        {
+            var rawType = p.PropertyType.GetRawType();
+            if (rawType == FieldType.ObjectByVal)
+            {
+                return new ByValFieldInfo(Provide(p.PropertyType), p.Name);
+            }
+            else
+            {
+                return new FieldInfo(rawType, p.Name);
+            }
         }
     }
 }
