@@ -1,0 +1,25 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="CoolSerializer.V3" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ assembly name="$(TargetPath)"#>
+<#@ import namespace="CoolSerializer.V3"#>
+<#@ output extension=".cs" #>
+using System;
+
+namespace CoolSerializer.V3
+{
+	public interface IDocumentReader
+	{
+<#		 foreach (var o in Enum.GetValues(typeof(FieldType)).Cast<FieldType>().Where(x=>x != FieldType.Object))
+		{#>
+		<#=string.Format("{0} Read{0}();", o)#>
+<#/*=		"case FieldType."+o+@":
+		return reader.Read"+o+"();"
+		*/#>
+<#		}#>
+		TypeInfo ReadTypeInfo();
+	}
+}

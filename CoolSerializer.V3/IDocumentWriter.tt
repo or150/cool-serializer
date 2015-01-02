@@ -1,0 +1,25 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="CoolSerializer.V3" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ assembly name="$(TargetPath)"#>
+<#@ import namespace="CoolSerializer.V3"#>
+<#@ output extension=".cs" #>
+using System;
+
+namespace CoolSerializer.V3
+{
+	public interface IDocumentWriter
+	{
+<#		 foreach (var o in Enum.GetValues(typeof(FieldType)).Cast<FieldType>().Where(x=>x != FieldType.Object))
+		{#>
+		<#=string.Format("void Write{0}({0} {1});", o, o.ToString().ToLower()[0])#>
+<#		/*="case FieldType."+o+@":
+		writer.Write"+o+"(("+o+@")graph);
+		break;"*/#>
+<#		}#>
+		void WriteTypeInfo(TypeInfo i);
+	}
+}
