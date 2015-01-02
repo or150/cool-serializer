@@ -9,7 +9,7 @@ namespace CoolSerializer.V3
         private readonly Stream mStream;
         private GuidMarshaler mGuidReader;
         private BinaryReader mBinaryReader;
-        private Dictionary<Guid,TypeInfo> mInfos = new Dictionary<Guid, TypeInfo>();
+        private Dictionary<Guid, TypeInfo> mInfos = new Dictionary<Guid, TypeInfo>();
 
         public StreamDocumentReader(Stream stream)
         {
@@ -113,20 +113,12 @@ namespace CoolSerializer.V3
             var fields = new FieldInfo[fieldsCount];
             for (int i = 0; i < fieldsCount; i++)
             {
-                var type = (FieldType) mBinaryReader.ReadByte();
+                var type = (FieldType)mBinaryReader.ReadByte();
                 var fieldName = mBinaryReader.ReadString();
-                if (type == FieldType.ObjectByVal)
-                {
-                    var typeDefinition = ReadTypeInfo();
-                    fields[i] = new ByValFieldInfo(typeDefinition,fieldName);
-                }
-                else
-                {
-                    fields[i] = new FieldInfo(type, fieldName);
-                }
+                fields[i] = new FieldInfo(type, fieldName);
             }
 
-            return new TypeInfo(guid,name,fields,isAlwaysByVal);
+            return new TypeInfo(guid, name, fields, isAlwaysByVal);
         }
     }
 }

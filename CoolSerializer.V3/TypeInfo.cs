@@ -42,25 +42,17 @@ namespace CoolSerializer.V3
 
         public FieldType Type { get; private set; }
         public string Name { get; private set; }
+        //public bool IsNullable { get; private set; }
         public override string ToString()
         {
             return string.Format("{0} {1}", Type.ToString(), Name.ToString());
         }
     }
 
-    public class ByValFieldInfo : FieldInfo
-    {
-        public ByValFieldInfo(TypeInfo typeInfo, string name) : base(FieldType.ObjectByVal, name)
-        {
-            TypeInfo = typeInfo;
-        }
 
-        public TypeInfo TypeInfo { get; private set; }
-    }
     public enum FieldType : byte
     {
         Object,
-        ObjectByVal,
         Boolean,
         Char,
         SByte,

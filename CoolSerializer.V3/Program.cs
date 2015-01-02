@@ -19,7 +19,8 @@ namespace CoolSerializer.V3
                 {
                     H = 6,
                     Prop = "asd",
-                    Surprise = 7ul
+                    Surprise = 7ul,
+                    //MyInt = 5
                 }
             };
             ((InnerGraphDerived) graph.Z).Surprise = graph;
@@ -100,6 +101,7 @@ namespace CoolSerializer.V3
 
     class InnerGraphDerived : InnerGraph
     {
+        //public int? MyInt { get; set; }
         public string Prop { get; set; }
         public object Surprise { get; set; }
     }

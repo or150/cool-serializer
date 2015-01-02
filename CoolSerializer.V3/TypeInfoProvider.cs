@@ -8,7 +8,7 @@ namespace CoolSerializer.V3
     {
         public TypeInfo Provide(Type type)
         {
-            return new TypeInfo(Guid.NewGuid(), type.FullName, ProvideFields(type),type.IsValueType);
+            return new TypeInfo(Guid.NewGuid(), type.FullName, ProvideFields(type), type.IsValueType);
         }
 
         private FieldInfo[] ProvideFields(Type type)
@@ -21,14 +21,7 @@ namespace CoolSerializer.V3
         private FieldInfo CreateFieldInfo(PropertyInfo p)
         {
             var rawType = p.PropertyType.GetRawType();
-            if (rawType == FieldType.ObjectByVal)
-            {
-                return new ByValFieldInfo(Provide(p.PropertyType), p.Name);
-            }
-            else
-            {
-                return new FieldInfo(rawType, p.Name);
-            }
+            return new FieldInfo(rawType, p.Name);
         }
     }
 }

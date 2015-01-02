@@ -86,18 +86,17 @@ namespace CoolSerializer.V3
             var type = graph.GetType();
             var rawType = type.GetRawType();
 
-            if (rawType != FieldType.Object && rawType != FieldType.ObjectByVal)
+            if (rawType != FieldType.Object)
             {
                 Box(writer,graph,rawType);
                 return;
             }
 
-            if (rawType != FieldType.ObjectByVal && WriteRevisited(writer, graph))
+            var info = mProvider.Provide(type);
+            if (!info.IsAlwaysByVal && WriteRevisited(writer, graph))
             {
                 return;
             }
-
-            var info = mProvider.Provide(type);
             GetSerializeExpression<T>(info).Compile()(writer, graph);
         }
 
@@ -170,11 +169,11 @@ namespace CoolSerializer.V3
                         fieldExpression);
                 return serializeField;
             }
-            else if (rawType == FieldType.ObjectByVal)
-            {
-                var fieldInfo = ((IByValBoundFieldInfo) fieldType).TypeInfo;
-                return Expression.Block(GetSerializeExpressions(fieldInfo, writerParam, fieldExpression));
-            }
+            //else if (rawType == FieldType.ObjectByVal)
+            //{
+            //    var fieldInfo = ((IByValBoundFieldInfo) fieldType).TypeInfo;
+            //    return Expression.Block(GetSerializeExpressions(fieldInfo, writerParam, fieldExpression));
+            //}
 
             var serializeMethod = typeof (IDocumentWriter).GetMethods
                 (BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)

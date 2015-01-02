@@ -14,10 +14,6 @@ namespace CoolSerializer.V3
                     {
                         return FieldType.Guid;
                     }
-                    else if (propertyType.IsValueType)
-                    {
-                        return FieldType.ObjectByVal;
-                    }
                     else
                     {
                         return FieldType.Object;
