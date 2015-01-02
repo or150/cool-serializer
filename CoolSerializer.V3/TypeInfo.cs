@@ -5,16 +5,18 @@ namespace CoolSerializer.V3
 {
     public class TypeInfo
     {
-        public TypeInfo(Guid guid, string name, FieldInfo[] fields)
+        public TypeInfo(Guid guid, string name, FieldInfo[] fields, bool isAlwaysByVal)
         {
             Guid = guid;
             Name = name;
             Fields = fields;
+            IsAlwaysByVal = isAlwaysByVal;
         }
 
         public Guid Guid { get; private set; }
         public string Name { get; private set; }
         public FieldInfo[] Fields { get; private set; }
+        public bool IsAlwaysByVal { get; private set; }
         public override string ToString()
         {
             var builder = new StringBuilder();

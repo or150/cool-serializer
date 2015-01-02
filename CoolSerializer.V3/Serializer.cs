@@ -143,7 +143,7 @@ namespace CoolSerializer.V3
             return lambda;
         }
 
-        private List<Expression> GetSerializeExpressions(IBoundedTypeInfo boundInfo, Expression writerParam, Expression graphParam)
+        private List<Expression> GetSerializeExpressions(IBoundTypeInfo boundInfo, Expression writerParam, Expression graphParam)
         {
             var fieldSerializeExprs = new List<Expression>();
 
@@ -157,7 +157,7 @@ namespace CoolSerializer.V3
         }
 
         private Expression GetRightSerializeMethod(Expression writerParam,
-            Expression fieldExpression, IBoundedFieldInfo fieldType)
+            Expression fieldExpression, IBoundFieldInfo fieldType)
         {
             var rawType = fieldType.FieldInfo.Type;
             if (rawType == FieldType.Object)
@@ -172,7 +172,7 @@ namespace CoolSerializer.V3
             }
             else if (rawType == FieldType.ObjectByVal)
             {
-                var fieldInfo = ((IByValBoundedFieldInfo) fieldType).TypeInfo;
+                var fieldInfo = ((IByValBoundFieldInfo) fieldType).TypeInfo;
                 return Expression.Block(GetSerializeExpressions(fieldInfo, writerParam, fieldExpression));
             }
 

@@ -107,7 +107,7 @@ namespace CoolSerializer.V3
             var retValParam = Expression.Variable(boundInfo.RealType,"retVal");
             var creation = Expression.New(boundInfo.RealType);
             var retValAssignment = Expression.Assign(retValParam, creation);
-            var addToVisitedObjects = boundInfo.RealType.IsValueType ? (Expression)Expression.Empty() 
+            var addToVisitedObjects = boundInfo.TypeInfo.IsAlwaysByVal ? (Expression)Expression.Empty() 
                 : (Expression)Expression.Call(Expression.Constant(this), "AddToVisitedObjects", new[]{boundInfo.RealType}, retValParam);
             var fieldDeserializeExprs = GetDeserializeExpressions(boundInfo, readerParam, retValParam);
 
@@ -116,7 +116,7 @@ namespace CoolSerializer.V3
             return lambda;
         }
 
-        private List<Expression> GetDeserializeExpressions(IBoundedTypeInfo boundInfo, Expression readerParam, Expression graphParam)
+        private List<Expression> GetDeserializeExpressions(IBoundTypeInfo boundInfo, Expression readerParam, Expression graphParam)
         {
             var fieldDeserializeExprs = new List<Expression>();
 
@@ -129,7 +129,7 @@ namespace CoolSerializer.V3
             return fieldDeserializeExprs;
         }
 
-        private Expression GetRightDeserializeMethod(Expression readerParam, IBoundedFieldInfo fieldType)
+        private Expression GetRightDeserializeMethod(Expression readerParam, IBoundFieldInfo fieldType)
         {
             if (fieldType.FieldInfo.Type == FieldType.Object)
             {
@@ -142,7 +142,7 @@ namespace CoolSerializer.V3
             }
             else if (fieldType.FieldInfo.Type == FieldType.ObjectByVal)
             {
-                var fieldInfo = ((IByValBoundedFieldInfo)fieldType).TypeInfo;
+                var fieldInfo = ((IByValBoundFieldInfo)fieldType).TypeInfo;
                 var retValParam = Expression.Variable(fieldInfo.RealType, "retField");
                 var creation = Expression.New(fieldInfo.RealType);
                 return Expression.Block(new []{retValParam},new[]{creation}.Concat(GetDeserializeExpressions(fieldInfo, readerParam, retValParam)).Concat(new[]{retValParam}));

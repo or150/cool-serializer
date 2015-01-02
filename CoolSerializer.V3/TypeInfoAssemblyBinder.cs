@@ -6,41 +6,41 @@ namespace CoolSerializer.V3
 {
     public class TypeInfoAssemblyBinder
     {
-        public IBoundedTypeInfo Provide(TypeInfo info)
+        public IBoundTypeInfo Provide(TypeInfo info)
         {
             var realType = Type.GetType(info.Name);
             if (realType == null)
             {
                 throw new NotImplementedException("Unk types are not implemented atm");
             }
-            var fields = new IBoundedFieldInfo[info.Fields.Length];
+            var fields = new IBoundFieldInfo[info.Fields.Length];
             for (int i = 0; i < fields.Length; i++)
             {
                 fields[i] = CreateBoundedFieldInfo(realType, info.Fields[i]);
             }
-            return new BoundedTypeInfo(info,realType,fields);
+            return new BoundTypeInfo(info,realType,fields);
         }
 
-        private IBoundedFieldInfo CreateBoundedFieldInfo(Type objectType, FieldInfo fieldInfo)
+        private IBoundFieldInfo CreateBoundedFieldInfo(Type objectType, FieldInfo fieldInfo)
         {
             if (fieldInfo.Type == FieldType.ObjectByVal)
             {
-                return new ByValBoundedFieldInfo(objectType,fieldInfo,this);
+                return new ByValBoundFieldInfo(objectType,fieldInfo,this);
             }
-            return new BoundedFieldInfo(objectType,fieldInfo);
+            return new BoundFieldInfo(objectType,fieldInfo);
         }
     }
 
-    public interface IBoundedTypeInfo
+    public interface IBoundTypeInfo
     {
         Type RealType { get; }
         TypeInfo TypeInfo { get; }
-        IBoundedFieldInfo[] Fields { get; }
+        IBoundFieldInfo[] Fields { get; }
     }
 
-    public class BoundedTypeInfo : IBoundedTypeInfo
+    public class BoundTypeInfo : IBoundTypeInfo
     {
-        public BoundedTypeInfo(TypeInfo typeInfo, Type realType, IBoundedFieldInfo[] fields)
+        public BoundTypeInfo(TypeInfo typeInfo, Type realType, IBoundFieldInfo[] fields)
         {
             RealType = realType;
             TypeInfo = typeInfo;
@@ -49,10 +49,10 @@ namespace CoolSerializer.V3
 
         public Type RealType { get; private set; }
         public TypeInfo TypeInfo { get; private set; }
-        public IBoundedFieldInfo[] Fields { get; private set; }
+        public IBoundFieldInfo[] Fields { get; private set; }
     }
 
-    public interface IBoundedFieldInfo
+    public interface IBoundFieldInfo
     {
         Type RealType { get; }
         FieldInfo FieldInfo { get; }
@@ -60,16 +60,16 @@ namespace CoolSerializer.V3
         Expression GetSetExpression(Expression graphParam, Expression graphFieldValue);
     }
 
-    public interface IByValBoundedFieldInfo : IBoundedFieldInfo
+    public interface IByValBoundFieldInfo : IBoundFieldInfo
     {
-        IBoundedTypeInfo TypeInfo { get; }
+        IBoundTypeInfo TypeInfo { get; }
     }
 
-    public class BoundedFieldInfo : IBoundedFieldInfo
+    public class BoundFieldInfo : IBoundFieldInfo
     {
         private readonly PropertyInfo mInfo;
 
-        public BoundedFieldInfo(Type objectType, FieldInfo fieldInfo)
+        public BoundFieldInfo(Type objectType, FieldInfo fieldInfo)
         {
             mInfo = objectType.GetProperty(fieldInfo.Name);
             if (mInfo == null)
@@ -95,14 +95,14 @@ namespace CoolSerializer.V3
         }
     }
 
-    public class ByValBoundedFieldInfo : BoundedFieldInfo, IByValBoundedFieldInfo
+    public class ByValBoundFieldInfo : BoundFieldInfo, IByValBoundFieldInfo
     {
-        public ByValBoundedFieldInfo(Type objectType, FieldInfo fieldInfo, TypeInfoAssemblyBinder typeInfoAssemblyBinder)
+        public ByValBoundFieldInfo(Type objectType, FieldInfo fieldInfo, TypeInfoAssemblyBinder typeInfoAssemblyBinder)
             : base(objectType, fieldInfo)
         {
             TypeInfo = typeInfoAssemblyBinder.Provide(((ByValFieldInfo) fieldInfo).TypeInfo);
         }
 
-        public IBoundedTypeInfo TypeInfo { get; private set; }
+        public IBoundTypeInfo TypeInfo { get; private set; }
     }
 }

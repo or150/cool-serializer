@@ -8,7 +8,7 @@ namespace CoolSerializer.V3
     {
         public TypeInfo Provide(Type type)
         {
-            return new TypeInfo(Guid.NewGuid(), type.FullName, ProvideFields(type));
+            return new TypeInfo(Guid.NewGuid(), type.FullName, ProvideFields(type),type.IsValueType);
         }
 
         private FieldInfo[] ProvideFields(Type type)
