@@ -57,14 +57,13 @@ namespace CoolSerializer.V3
             }
         }
 
-        public IEnumerable<Expression> GetFieldsDeserializeExpressions(Expression readerParam, Expression graphParam,
-            Func<Expression, IBoundFieldInfo, Expression> deserializeMethodProvider)
+        public IEnumerable<Expression> GetFieldsDeserializeExpressions(Expression readerParam, Expression graphParam,Deserializer deserializer)
         {
             var countParam = Expression.Parameter(typeof (int), "count");
             var readInt32 = Expression.Assign(countParam,Expression.Call(readerParam, "ReadInt32", null));
             var iParam = Expression.Parameter(typeof (int), "i");
             var range = new Func<int, int, IEnumerable<int>>(Enumerable.Range).Method;
-            var castedDes = deserializeMethodProvider(readerParam, mElementInfo);
+            var castedDes = deserializer.GetRightDeserializeMethod(readerParam, mElementInfo);
             var collectionAdd = GetAddMethod(graphParam, iParam,castedDes);
             var iteration = ForEach(typeof (int), Expression.Call(range, Expression.Constant(0), countParam), iParam, collectionAdd);
             var block = Expression.Block(new[] {countParam, iParam}, readInt32, Expression.Assign(graphParam, GetCreateMethod(countParam)), iteration);
@@ -90,7 +89,7 @@ namespace CoolSerializer.V3
             return Expression.Call(collectionParam, addMethod, itemParam);
         }
 
-        public IEnumerable<Expression> GetFieldsSerializeExpressions(Expression writerParam, Expression graphParam, Func<Expression, Expression, IBoundFieldInfo, Expression> serializeMethodProvider)
+        public IEnumerable<Expression> GetFieldsSerializeExpressions(Expression writerParam, Expression graphParam, Serializer serializer)
         {
             var countPropertyInfo = (mElementInfo.IsGeneric ? typeof(ICollection<>).MakeGenericType(mElementInfo.RealType) : typeof(ICollection))
                 .GetProperty("Count", BindingFlags.Instance | BindingFlags.Public);
@@ -98,7 +97,7 @@ namespace CoolSerializer.V3
                 countPropertyInfo);
             yield return Expression.Call(writerParam, "WriteInt32", null, count);
             var elementParam = Expression.Variable(mElementInfo.RealType, "element");
-            var serializeExpression = serializeMethodProvider(writerParam, elementParam, mElementInfo);
+            var serializeExpression = serializer.GetRightSerializeMethod(writerParam, elementParam, mElementInfo);
             yield return Expression.Block(new[]{elementParam}, ForEach(mElementInfo.IsGeneric ? mElementInfo.RealType : null, graphParam, elementParam, serializeExpression));
         }
 
@@ -132,7 +131,7 @@ namespace CoolSerializer.V3
         }
     }
 
-    public class BoundCollectionFieldInfo : IBoundFieldInfo
+    public class BoundCollectionFieldInfo : IVariableBoundFieldInfo
     {
         public BoundCollectionFieldInfo(Type collectionType)
         {
@@ -162,24 +161,14 @@ namespace CoolSerializer.V3
         public FieldType RawType { get; private set; }
         public FieldInfo FieldInfo { get; private set; }
         public bool IsGeneric { get; private set; }
-        public Expression GetGetExpression(Expression graphParam)
-        {
-            throw new NotSupportedException();
-        }
-
-        public Expression GetSetExpression(Expression graphParam, Expression graphFieldValue)
-        {
-            throw new NotSupportedException();
-        }
     }
 
     public interface IBoundTypeInfo
     {
         Type RealType { get; }
         TypeInfo TypeInfo { get; }
-        IBoundFieldInfo[] Fields { get; }
-        IEnumerable<Expression> GetFieldsDeserializeExpressions(Expression readerParam, Expression graphParam, Func<Expression, IBoundFieldInfo, Expression> deserializeMethodProvider);
-        IEnumerable<Expression> GetFieldsSerializeExpressions(Expression writerParam, Expression graphParam, Func<Expression, Expression, IBoundFieldInfo, Expression> serializeMethodProvider);
+        IEnumerable<Expression> GetFieldsDeserializeExpressions(Expression readerParam, Expression graphParam, Deserializer deserializer);
+        IEnumerable<Expression> GetFieldsSerializeExpressions(Expression writerParam, Expression graphParam, Serializer serializer);
         Expression GetCreateExpression();
     }
 
@@ -196,28 +185,27 @@ namespace CoolSerializer.V3
         public TypeInfo TypeInfo { get; private set; }
         public IBoundFieldInfo[] Fields { get; private set; }
 
-        public IEnumerable<Expression> GetFieldsDeserializeExpressions(Expression readerParam, Expression graphParam,
-            Func<Expression, IBoundFieldInfo, Expression> deserializeMethodProvider)
+        public IEnumerable<Expression> GetFieldsDeserializeExpressions(Expression readerParam, Expression graphParam, Deserializer deserializer)
         {
             var fieldDeserializeExprs = new List<Expression>();
 
-            foreach (var field in this.Fields)
+            foreach (var field in this.Fields.Cast<IConcreteBoundFieldInfo>())
             {
-                var castedDes = deserializeMethodProvider(readerParam, field);
+                var castedDes = deserializer.GetRightDeserializeMethod(readerParam, field);
                 var assignment = field.GetSetExpression(graphParam, castedDes);
                 fieldDeserializeExprs.Add(assignment);
             }
             return fieldDeserializeExprs;
         }
 
-        public IEnumerable<Expression> GetFieldsSerializeExpressions(Expression writerParam, Expression graphParam, Func<Expression, Expression, IBoundFieldInfo, Expression> serializeMethodProvider)
+        public IEnumerable<Expression> GetFieldsSerializeExpressions(Expression writerParam, Expression graphParam, Serializer serializer)
         {
             var fieldSerializeExprs = new List<Expression>();
 
-            foreach (var field in this.Fields)
+            foreach (var field in this.Fields.Cast<IConcreteBoundFieldInfo>())
             {
                 var fieldAccessExpression = field.GetGetExpression(graphParam);
-                var serializeExpression = serializeMethodProvider(writerParam, fieldAccessExpression, field);
+                var serializeExpression = serializer.GetRightSerializeMethod(writerParam, fieldAccessExpression, field);
                 fieldSerializeExprs.Add(serializeExpression);
             }
             return fieldSerializeExprs;
@@ -228,22 +216,26 @@ namespace CoolSerializer.V3
             return Expression.New(RealType);
         }
     }
-
     public interface IBoundFieldInfo
     {
         Type RealType { get; }
         FieldType RawType { get; }
         //FieldInfo FieldInfo { get; }
+
+    }
+
+    public interface IConcreteBoundFieldInfo : IBoundFieldInfo
+    {
         Expression GetGetExpression(Expression graphParam);
         Expression GetSetExpression(Expression graphParam, Expression graphFieldValue);
     }
 
-    public interface IByValBoundFieldInfo : IBoundFieldInfo
+    public interface IVariableBoundFieldInfo : IBoundFieldInfo
     {
-        IBoundTypeInfo TypeInfo { get; }
+        //Expression GetGetExpression(Expression graphParam, Expression iParam);
+        //Expression GetSetExpression(Expression graphParam, Expression graphFieldValue, Expression iParam);
     }
-
-    public class BoundFieldInfo : IBoundFieldInfo
+    public class BoundFieldInfo : IConcreteBoundFieldInfo
     {
         private readonly PropertyInfo mInfo;
 

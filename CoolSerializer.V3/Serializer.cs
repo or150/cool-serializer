@@ -9,7 +9,7 @@ using System.Threading;
 
 namespace CoolSerializer.V3
 {
-    class Serializer
+    public class Serializer
     {
         private readonly TypeInfoProvider mProvider = new TypeInfoProvider();
         private readonly TypeInfoBinder mBinder = new TypeInfoBinder();
@@ -142,7 +142,7 @@ namespace CoolSerializer.V3
             var writeHeaderExpr = Expression.Call(writerParam, "WriteByte", null, Expression.Constant((byte)ComplexHeader.Value));
             var writeTypeInfoExpr = Expression.Call(writerParam, "WriteTypeInfo", null, Expression.Constant(info));
 
-            var fieldSerializeExprs = GetFieldsSerializeExpressions(boundInfo, writerParam, castedGraph);
+            var fieldSerializeExprs = boundInfo.GetFieldsSerializeExpressions(writerParam, castedGraph, this);
 
             var block = Expression.Block(new[] { castedGraph },
                 new Expression[] { castExpression, writeHeaderExpr, writeTypeInfoExpr }.Concat(fieldSerializeExprs));
@@ -150,21 +150,7 @@ namespace CoolSerializer.V3
             return lambda;
         }
 
-        private IEnumerable<Expression> GetFieldsSerializeExpressions(IBoundTypeInfo boundInfo, Expression writerParam, Expression graphParam)
-        {
-            return boundInfo.GetFieldsSerializeExpressions(writerParam, graphParam, GetRightSerializeMethod);
-            //var fieldSerializeExprs = new List<Expression>();
-
-            //foreach (var field in boundInfo.Fields)
-            //{
-            //    var fieldAccessExpression = field.GetGetExpression(graphParam);
-            //    var serializeExpression = GetRightSerializeMethod(writerParam, fieldAccessExpression, field);
-            //    fieldSerializeExprs.Add(serializeExpression);
-            //}
-            //return fieldSerializeExprs;
-        }
-
-        private Expression GetRightSerializeMethod(Expression writerParam, Expression fieldExpression, IBoundFieldInfo fieldType)
+        public Expression GetRightSerializeMethod(Expression writerParam, Expression fieldExpression, IBoundFieldInfo fieldType)
         {
             var rawType = fieldType.RawType;
             if (rawType == FieldType.Object || rawType == FieldType.Collection)

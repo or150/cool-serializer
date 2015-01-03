@@ -8,7 +8,7 @@ using System.Reflection;
 
 namespace CoolSerializer.V3
 {
-    class Deserializer
+    public class Deserializer
     {
         TypeInfoBinder mBinder = new TypeInfoBinder();
         
@@ -104,33 +104,31 @@ namespace CoolSerializer.V3
         {
             var boundInfo = mBinder.Provide(info);
             var readerParam = Expression.Parameter(typeof(IDocumentReader), "reader");
-            var retValParam = Expression.Variable(boundInfo.RealType,"retVal");
-            var creation = boundInfo.GetCreateExpression();
-            var retValAssignment = Expression.Assign(retValParam, creation);
-            var addToVisitedObjects = boundInfo.TypeInfo.IsAlwaysByVal ? (Expression)Expression.Empty() 
-                : (Expression)Expression.Call(Expression.Constant(this), "AddToVisitedObjects", new[]{boundInfo.RealType}, retValParam);
-            var fieldDeserializeExprs = GetFieldsDeserializeExpressions(boundInfo, readerParam, retValParam);
-
-            var block = Expression.Block(new []{retValParam},new []{retValAssignment,addToVisitedObjects}.Concat(fieldDeserializeExprs).Concat(new []{retValParam}));
+            var block = GetX(boundInfo, readerParam);
             var lambda = Expression.Lambda<Func<IDocumentReader, T>>(block, readerParam);
             return lambda;
         }
 
-        private IEnumerable<Expression> GetFieldsDeserializeExpressions(IBoundTypeInfo boundInfo, Expression readerParam, Expression graphParam)
-        {
-            return boundInfo.GetFieldsDeserializeExpressions(readerParam, graphParam, GetRightDeserializeMethod);
-            //var fieldDeserializeExprs = new List<Expression>();
 
-            //foreach (var field in boundInfo.Fields)
-            //{
-            //    var castedDes = GetRightDeserializeMethod(readerParam, field);
-            //    var assignment = field.GetSetExpression(graphParam, castedDes);
-            //    fieldDeserializeExprs.Add(assignment);
-            //}
-            //return fieldDeserializeExprs;
+        private Expression GetX(IBoundTypeInfo boundInfo, Expression readerParam)
+        {
+            var retValParam = Expression.Variable(boundInfo.RealType, "retVal");
+            var creation = boundInfo.GetCreateExpression();
+            var retValAssignment = Expression.Assign(retValParam, creation);
+            var addToVisitedObjects = GetAddToVisitedObjectsExpr(boundInfo, retValParam);
+            var fieldDeserializeExprs = boundInfo.GetFieldsDeserializeExpressions(readerParam, retValParam, this);
+
+            var block = Expression.Block(new[] {retValParam},
+                new[] {retValAssignment, addToVisitedObjects}.Concat(fieldDeserializeExprs).Concat(new[] {retValParam}));
+            return block;
         }
 
-        private Expression GetRightDeserializeMethod(Expression readerParam, IBoundFieldInfo fieldType)
+        public Expression GetAddToVisitedObjectsExpr(IBoundTypeInfo boundInfo, ParameterExpression retValParam)
+        {
+            return boundInfo.TypeInfo.IsAlwaysByVal ? (Expression) Expression.Empty() : Expression.Call(Expression.Constant(this), "AddToVisitedObjects", new[] {boundInfo.RealType}, retValParam);
+        }
+
+        public Expression GetRightDeserializeMethod(Expression readerParam, IBoundFieldInfo fieldType)
         {
             if (fieldType.RawType == FieldType.Object || fieldType.RawType == FieldType.Collection)
             {
