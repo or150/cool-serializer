@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 
@@ -8,8 +9,9 @@ namespace CoolSerializer.V3
     {
         static void Main(string[] args)
         {
-            var graph = new Graph()
+            object graph = new Graph()
             {
+                Arr = new []{1,3,4,5},
                 S = new InnerStruct
                 {
                     I = 5,
@@ -23,8 +25,8 @@ namespace CoolSerializer.V3
                     MyInt = 29
                 }
             };
-            ((InnerGraphDerived)graph.Z).Surprise = graph;
-
+            ((InnerGraphDerived)((Graph)graph).Z).Surprise = graph;
+            graph = new List<Graph>() {(Graph) graph};
             //var graph = new InnerGraphDerived()
             //{
             //    H = 6,
@@ -41,17 +43,17 @@ namespace CoolSerializer.V3
             var count = 1000 * 1000;
 
             var time = Stopwatch.StartNew();
+            //for (int i = 0; i < count; i++)
+            //{
+            //    s.Position = 0;
+            //    ser.Serialize(s, graph);
+            //}
+
             for (int i = 0; i < count; i++)
             {
                 s.Position = 0;
-                ser.Serialize(s, graph);
+                var obj = deserializer.Deserialize(s);
             }
-
-            //for (int i = 0; i < count ; i++)
-            //{
-            //    s.Position = 0;
-            //    var obj = deserializer.Deserialize(s);   
-            //}
 
             time.Stop();
             var mps = count/time.Elapsed.TotalSeconds;
@@ -89,6 +91,7 @@ namespace CoolSerializer.V3
 
     public class Graph
     {
+        public int[] Arr { get; set; }
         public int X { get; set; }
         public int Y { get; set; }
         public InnerGraph Z { get; set; }

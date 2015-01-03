@@ -30,8 +30,25 @@ namespace CoolSerializer.V3
         public TypeInfo Provide<T>(T graph)
         {
             var type = TypeInfoHelper<T>.ProvideType(graph);
-            return mInfos.GetOrAdd(type,
-                (t) => new TypeInfo(Guid.NewGuid(), t.FullName, t.GetRawType(), ProvideFields(t), t.IsValueType));
+            return mInfos.GetOrAdd(type, CreateTypeInfo);
+        }
+
+        private TypeInfo CreateTypeInfo(Type t)
+        {
+            var rawType = t.GetRawType();
+            FieldInfo[] fields = null;
+            if (t.GetRawType() == FieldType.Collection)
+            {
+                var collectionInterface = t.GetInterfaces().First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>));
+                var elementType = collectionInterface.GetGenericArguments()[0];
+                fields = new FieldInfo[] { new FieldInfo(elementType.GetRawType(), "Items"), };
+                //fields = new FieldInfo[0];
+            }
+            else
+            {
+                fields = ProvideFields(t);
+            }
+            return new TypeInfo(Guid.NewGuid(), t.FullName, rawType, fields, t.IsValueType);
         }
 
         private FieldInfo[] ProvideFields(Type type)

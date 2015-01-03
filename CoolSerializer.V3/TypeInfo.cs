@@ -54,6 +54,7 @@ namespace CoolSerializer.V3
     public enum FieldType : byte
     {
         Object,
+        Collection,
         Boolean,
         Char,
         SByte,

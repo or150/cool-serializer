@@ -105,33 +105,34 @@ namespace CoolSerializer.V3
             var boundInfo = mBinder.Provide(info);
             var readerParam = Expression.Parameter(typeof(IDocumentReader), "reader");
             var retValParam = Expression.Variable(boundInfo.RealType,"retVal");
-            var creation = Expression.New(boundInfo.RealType);
+            var creation = boundInfo.GetCreateExpression();
             var retValAssignment = Expression.Assign(retValParam, creation);
             var addToVisitedObjects = boundInfo.TypeInfo.IsAlwaysByVal ? (Expression)Expression.Empty() 
                 : (Expression)Expression.Call(Expression.Constant(this), "AddToVisitedObjects", new[]{boundInfo.RealType}, retValParam);
-            var fieldDeserializeExprs = GetDeserializeExpressions(boundInfo, readerParam, retValParam);
+            var fieldDeserializeExprs = GetFieldsDeserializeExpressions(boundInfo, readerParam, retValParam);
 
             var block = Expression.Block(new []{retValParam},new []{retValAssignment,addToVisitedObjects}.Concat(fieldDeserializeExprs).Concat(new []{retValParam}));
             var lambda = Expression.Lambda<Func<IDocumentReader, T>>(block, readerParam);
             return lambda;
         }
 
-        private List<Expression> GetDeserializeExpressions(IBoundTypeInfo boundInfo, Expression readerParam, Expression graphParam)
+        private IEnumerable<Expression> GetFieldsDeserializeExpressions(IBoundTypeInfo boundInfo, Expression readerParam, Expression graphParam)
         {
-            var fieldDeserializeExprs = new List<Expression>();
+            return boundInfo.GetFieldsDeserializeExpressions(readerParam, graphParam, GetRightDeserializeMethod);
+            //var fieldDeserializeExprs = new List<Expression>();
 
-            foreach (var field in boundInfo.Fields)
-            {
-                var castedDes = GetRightDeserializeMethod(readerParam, field);
-                var assignment = field.GetSetExpression(graphParam, castedDes);
-                fieldDeserializeExprs.Add(assignment);
-            }
-            return fieldDeserializeExprs;
+            //foreach (var field in boundInfo.Fields)
+            //{
+            //    var castedDes = GetRightDeserializeMethod(readerParam, field);
+            //    var assignment = field.GetSetExpression(graphParam, castedDes);
+            //    fieldDeserializeExprs.Add(assignment);
+            //}
+            //return fieldDeserializeExprs;
         }
 
         private Expression GetRightDeserializeMethod(Expression readerParam, IBoundFieldInfo fieldType)
         {
-            if (fieldType.FieldInfo.Type == FieldType.Object)
+            if (fieldType.FieldInfo.Type == FieldType.Object || fieldType.FieldInfo.Type == FieldType.Collection)
             {
                 var deserializeField = Expression.Call
                     (Expression.Constant(this),

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace CoolSerializer.V3
 {
@@ -13,6 +15,12 @@ namespace CoolSerializer.V3
                     if (propertyType == typeof(Guid))
                     {
                         return FieldType.Guid;
+                    }
+                    else if (
+                        propertyType.GetInterfaces()
+                            .Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof (ICollection<>)))
+                    {
+                        return FieldType.Collection;
                     }
                     else
                     {

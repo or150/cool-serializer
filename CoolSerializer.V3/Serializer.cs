@@ -87,7 +87,7 @@ namespace CoolSerializer.V3
         private void SerializeComplex<T>(IDocumentWriter writer, T graph)
         {
             var info = mProvider.Provide(graph);
-            if (info.RawType != FieldType.Object)
+            if (info.RawType != FieldType.Object && info.RawType != FieldType.Collection)
             {
                 Box(writer, graph, info.RawType);
                 return;
@@ -142,7 +142,7 @@ namespace CoolSerializer.V3
             var writeHeaderExpr = Expression.Call(writerParam, "WriteByte", null, Expression.Constant((byte)ComplexHeader.Value));
             var writeTypeInfoExpr = Expression.Call(writerParam, "WriteTypeInfo", null, Expression.Constant(info));
 
-            var fieldSerializeExprs = GetSerializeExpressions(boundInfo, writerParam, castedGraph);
+            var fieldSerializeExprs = GetFieldsSerializeExpressions(boundInfo, writerParam, castedGraph);
 
             var block = Expression.Block(new[] { castedGraph },
                 new Expression[] { castExpression, writeHeaderExpr, writeTypeInfoExpr }.Concat(fieldSerializeExprs));
@@ -150,24 +150,24 @@ namespace CoolSerializer.V3
             return lambda;
         }
 
-        private List<Expression> GetSerializeExpressions(IBoundTypeInfo boundInfo, Expression writerParam, Expression graphParam)
+        private IEnumerable<Expression> GetFieldsSerializeExpressions(IBoundTypeInfo boundInfo, Expression writerParam, Expression graphParam)
         {
-            var fieldSerializeExprs = new List<Expression>();
+            return boundInfo.GetFieldsSerializeExpressions(writerParam, graphParam, GetRightSerializeMethod);
+            //var fieldSerializeExprs = new List<Expression>();
 
-            foreach (var field in boundInfo.Fields)
-            {
-                var fieldAccessExpression = field.GetGetExpression(graphParam);
-                var serializeExpression = GetRightSerializeMethod(writerParam, fieldAccessExpression, field);
-                fieldSerializeExprs.Add(serializeExpression);
-            }
-            return fieldSerializeExprs;
+            //foreach (var field in boundInfo.Fields)
+            //{
+            //    var fieldAccessExpression = field.GetGetExpression(graphParam);
+            //    var serializeExpression = GetRightSerializeMethod(writerParam, fieldAccessExpression, field);
+            //    fieldSerializeExprs.Add(serializeExpression);
+            //}
+            //return fieldSerializeExprs;
         }
 
-        private Expression GetRightSerializeMethod(Expression writerParam,
-            Expression fieldExpression, IBoundFieldInfo fieldType)
+        private Expression GetRightSerializeMethod(Expression writerParam, Expression fieldExpression, IBoundFieldInfo fieldType)
         {
             var rawType = fieldType.FieldInfo.Type;
-            if (rawType == FieldType.Object)
+            if (rawType == FieldType.Object || rawType == FieldType.Collection)
             {
                 var serializeField = Expression.Call
                    (Expression.Constant(this),
