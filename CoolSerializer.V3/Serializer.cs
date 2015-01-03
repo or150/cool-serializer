@@ -137,15 +137,7 @@ namespace CoolSerializer.V3
             var boundInfo = mBinder.Provide(info);
             var writerParam = Expression.Parameter(typeof(IDocumentWriter), "writer");
             var graphParam = Expression.Parameter(typeof(T), "graph");
-            var castedGraph = Expression.Variable(boundInfo.RealType, "castedGraph");
-            var castExpression = Expression.Assign(castedGraph, Expression.Convert(graphParam, boundInfo.RealType));
-            var writeHeaderExpr = Expression.Call(writerParam, "WriteByte", null, Expression.Constant((byte)ComplexHeader.Value));
-            var writeTypeInfoExpr = Expression.Call(writerParam, "WriteTypeInfo", null, Expression.Constant(info));
-
-            var fieldSerializeExprs = boundInfo.GetFieldsSerializeExpressions(writerParam, castedGraph, this);
-
-            var block = Expression.Block(new[] { castedGraph },
-                new Expression[] { castExpression, writeHeaderExpr, writeTypeInfoExpr }.Concat(fieldSerializeExprs));
+            var block = boundInfo.GetSerializeExpression(graphParam, writerParam, this);
             var lambda = Expression.Lambda<Action<IDocumentWriter, T>>(block, writerParam, graphParam);
             return lambda;
         }

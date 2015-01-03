@@ -30,50 +30,45 @@ namespace CoolSerializer.V3
             };
             ((InnerGraphDerived)graph2.Z).Surprise = graph2;
             ((ArrayList) graph2.Coll).Add(graph2);
-            var graph = new List<Graph>() {null, (Graph) graph2, null, (Graph)graph2};
+            var graph = new List<Graph>() {null, graph2, null, (Graph)graph2};
             ((ArrayList)graph2.Coll).Add(graph);
 
-            var coll = Enumerable.Range(0, 300).Select(e =>
-            {
-                var x = new Graph()
-                {
-                    Arr = new[] {1, 3, 4, 5},
-                    Coll = new ArrayList() {4, 5, 6, 7, null, 9},
-                    S = new InnerStruct
-                    {
-                        I = 5,
-                        L = 1
-                    },
-                    Z = new InnerGraphDerived()
-                    {
-                        H = 6,
-                        Prop = "asd",
-                        Surprise = null,
-                        MyInt = 29
-                    }
-                };
-                return x;
-            }).ToList();
-            //var graph = new InnerGraphDerived()
+            //var coll = Enumerable.Range(0, 300).Select(e =>
             //{
-            //    H = 6,
-            //    Prop = "Proppp",
-            //    Surprise = 7ul
-            //};
+            //    var x = new Graph()
+            //    {
+            //        Arr = new[] {1, 3, 4, 5},
+            //        Coll = new ArrayList() {4, 5, 6, 7, null, 9},
+            //        S = new InnerStruct
+            //        {
+            //            I = 5,
+            //            L = 1
+            //        },
+            //        Z = new InnerGraphDerived()
+            //        {
+            //            H = 6,
+            //            Prop = "asd",
+            //            Surprise = null,
+            //            MyInt = 29
+            //        }
+            //    };
+            //    return x;
+            //}).ToList();
+            
             var ser = new Serializer();
             var deserializer = new Deserializer();
             var s = new MemoryStream();
-            ser.Serialize(s, coll);
+            ser.Serialize(s, graph);
             s.Position = 0;
             deserializer.Deserialize(s);
 
-            var count = 1000 * 10;
+            var count = 1000 * 1000;
 
             var time = Stopwatch.StartNew();
             //for (int i = 0; i < count; i++)
             //{
             //    s.Position = 0;
-            //    ser.Serialize(s, coll);
+            //    ser.Serialize(s, graph);
             //}
 
             for (int i = 0; i < count; i++)
