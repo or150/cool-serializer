@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -18,7 +19,7 @@ namespace CoolSerializer.V3
                     }
                     else if (
                         propertyType.GetInterfaces()
-                            .Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof (ICollection<>)))
+                            .Any(i =>i == typeof(IList) || i.IsGenericType && i.GetGenericTypeDefinition() == typeof (ICollection<>)))
                     {
                         return FieldType.Collection;
                     }

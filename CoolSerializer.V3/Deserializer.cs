@@ -132,7 +132,7 @@ namespace CoolSerializer.V3
 
         private Expression GetRightDeserializeMethod(Expression readerParam, IBoundFieldInfo fieldType)
         {
-            if (fieldType.FieldInfo.Type == FieldType.Object || fieldType.FieldInfo.Type == FieldType.Collection)
+            if (fieldType.RawType == FieldType.Object || fieldType.RawType == FieldType.Collection)
             {
                 var deserializeField = Expression.Call
                     (Expression.Constant(this),

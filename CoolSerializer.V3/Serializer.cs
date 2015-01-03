@@ -166,7 +166,7 @@ namespace CoolSerializer.V3
 
         private Expression GetRightSerializeMethod(Expression writerParam, Expression fieldExpression, IBoundFieldInfo fieldType)
         {
-            var rawType = fieldType.FieldInfo.Type;
+            var rawType = fieldType.RawType;
             if (rawType == FieldType.Object || rawType == FieldType.Collection)
             {
                 var serializeField = Expression.Call

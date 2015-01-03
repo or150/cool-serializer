@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -12,6 +13,7 @@ namespace CoolSerializer.V3
             object graph = new Graph()
             {
                 Arr = new []{1,3,4,5},
+                Coll = new ArrayList(){4,5,6,7},
                 S = new InnerStruct
                 {
                     I = 5,
@@ -92,6 +94,7 @@ namespace CoolSerializer.V3
     public class Graph
     {
         public int[] Arr { get; set; }
+        public ICollection Coll { get; set; }
         public int X { get; set; }
         public int Y { get; set; }
         public InnerGraph Z { get; set; }

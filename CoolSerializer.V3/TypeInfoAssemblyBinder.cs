@@ -37,13 +37,13 @@ namespace CoolSerializer.V3
 
     public class BoundCollectionTypeInfo : IBoundTypeInfo
     {
-        private BoundCollectionFieldInfo mElementInfo;
+        private readonly BoundCollectionFieldInfo mElementInfo;
 
         public BoundCollectionTypeInfo(TypeInfo info, Type realType)
         {
             TypeInfo = info;
             RealType = realType;
-            mElementInfo = new BoundCollectionFieldInfo(realType, info.Fields[0]);
+            mElementInfo = new BoundCollectionFieldInfo(realType);
         }
 
         public Type RealType { get; private set; }
@@ -86,27 +86,28 @@ namespace CoolSerializer.V3
             {
                 return Expression.Assign(Expression.ArrayAccess(collectionParam, iParam), itemParam);
             }
-            var addMethod = typeof (ICollection<>).MakeGenericType(mElementInfo.RealType).GetMethod("Add", BindingFlags.Public | BindingFlags.Instance);
+            var addMethod = (mElementInfo.IsGeneric ? typeof (ICollection<>).MakeGenericType(mElementInfo.RealType) : typeof(IList)).GetMethod("Add", BindingFlags.Public | BindingFlags.Instance);
             return Expression.Call(collectionParam, addMethod, itemParam);
         }
 
         public IEnumerable<Expression> GetFieldsSerializeExpressions(Expression writerParam, Expression graphParam, Func<Expression, Expression, IBoundFieldInfo, Expression> serializeMethodProvider)
         {
+            var countPropertyInfo = (mElementInfo.IsGeneric ? typeof(ICollection<>).MakeGenericType(mElementInfo.RealType) : typeof(ICollection))
+                .GetProperty("Count", BindingFlags.Instance | BindingFlags.Public);
             var count = Expression.MakeMemberAccess(graphParam,
-                typeof (ICollection<>).MakeGenericType(mElementInfo.RealType)
-                    .GetProperty("Count", BindingFlags.Instance | BindingFlags.Public));
+                countPropertyInfo);
             yield return Expression.Call(writerParam, "WriteInt32", null, count);
             var elementParam = Expression.Variable(mElementInfo.RealType, "element");
             var serializeExpression = serializeMethodProvider(writerParam, elementParam, mElementInfo);
-            yield return Expression.Block(new[]{elementParam}, ForEach(mElementInfo.RealType, graphParam, elementParam, serializeExpression));
+            yield return Expression.Block(new[]{elementParam}, ForEach(mElementInfo.IsGeneric ? mElementInfo.RealType : null, graphParam, elementParam, serializeExpression));
         }
 
         public Expression ForEach(Type elementType, Expression collection, Expression element, Expression content)
         {
-            var getEnumerator = typeof (IEnumerable<>).MakeGenericType(elementType)
+            var getEnumerator = (elementType == null ? typeof(IEnumerable) : typeof (IEnumerable<>).MakeGenericType(elementType))
                 .GetMethod("GetEnumerator", BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public);
 
-            var enumeratorType = typeof (IEnumerator<>).MakeGenericType(elementType);
+            var enumeratorType = (elementType == null ? typeof(IEnumerator) : typeof (IEnumerator<>).MakeGenericType(elementType));
             var enumerator = Expression.Variable(enumeratorType, "enumerator");
             var moveNext = typeof(IEnumerator)
                 .GetMethod("MoveNext", BindingFlags.Instance | BindingFlags.Public);
@@ -133,16 +134,34 @@ namespace CoolSerializer.V3
 
     public class BoundCollectionFieldInfo : IBoundFieldInfo
     {
-        public BoundCollectionFieldInfo(Type collectionType, FieldInfo fieldInfo)
+        public BoundCollectionFieldInfo(Type collectionType)
         {
-            FieldInfo = fieldInfo;
-            var collectionInterface = collectionType.GetInterfaces().First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>));
-            var elementType = collectionInterface.GetGenericArguments()[0];
+            var collectionInterface = collectionType.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>));
+            
+            Type elementType = null;
+            if (collectionInterface == null)
+            {
+                if (collectionType.GetInterfaces().All(i => i != typeof(IList)))
+                {
+                    throw new NotSupportedException();
+                }
+                elementType = typeof (object);
+                IsGeneric = false;
+            }
+            else
+            {
+                elementType = collectionInterface.GetGenericArguments()[0];
+                IsGeneric = true;
+            }
+            
             RealType = elementType;
+            RawType = elementType.GetRawType();
         }
 
         public Type RealType { get; private set; }
+        public FieldType RawType { get; private set; }
         public FieldInfo FieldInfo { get; private set; }
+        public bool IsGeneric { get; private set; }
         public Expression GetGetExpression(Expression graphParam)
         {
             throw new NotSupportedException();
@@ -213,7 +232,8 @@ namespace CoolSerializer.V3
     public interface IBoundFieldInfo
     {
         Type RealType { get; }
-        FieldInfo FieldInfo { get; }
+        FieldType RawType { get; }
+        //FieldInfo FieldInfo { get; }
         Expression GetGetExpression(Expression graphParam);
         Expression GetSetExpression(Expression graphParam, Expression graphFieldValue);
     }
@@ -240,6 +260,7 @@ namespace CoolSerializer.V3
         }
 
         public Type RealType { get; private set; }
+        public FieldType RawType { get { return FieldInfo.Type; } }
         public FieldInfo FieldInfo { get; private set; }
 
         public Expression GetGetExpression(Expression graphParam)

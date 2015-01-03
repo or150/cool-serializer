@@ -39,10 +39,10 @@ namespace CoolSerializer.V3
             FieldInfo[] fields = null;
             if (t.GetRawType() == FieldType.Collection)
             {
-                var collectionInterface = t.GetInterfaces().First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>));
-                var elementType = collectionInterface.GetGenericArguments()[0];
-                fields = new FieldInfo[] { new FieldInfo(elementType.GetRawType(), "Items"), };
-                //fields = new FieldInfo[0];
+                //var collectionInterface = t.GetInterfaces().First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>));
+                //var elementType = collectionInterface.GetGenericArguments()[0];
+                //fields = new FieldInfo[] { new FieldInfo(elementType.GetRawType(), "Items"), };
+                fields = new FieldInfo[0];
             }
             else
             {
