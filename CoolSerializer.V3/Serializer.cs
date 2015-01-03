@@ -12,7 +12,8 @@ namespace CoolSerializer.V3
     {
         private readonly TypeInfoProvider mProvider = new TypeInfoProvider();
         private readonly TypeInfoBinder mBinder = new TypeInfoBinder(new BasicSimplifersProvider());
-        private ConcurrentDictionary<TypeInfo, Delegate> mSerializeMethods = new ConcurrentDictionary<TypeInfo, Delegate>(TypeInfoEqualityComparer.Instance);
+        private readonly ConcurrentDictionary<TypeInfo, Delegate> mSerializeMethods = new ConcurrentDictionary<TypeInfo, Delegate>(TypeInfoEqualityComparer.Instance);
+        
         private Dictionary<object, int> mVisitedObjects;
 
         public void Serialize(Stream stream, object graph)

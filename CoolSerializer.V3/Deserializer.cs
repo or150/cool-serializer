@@ -10,9 +10,8 @@ namespace CoolSerializer.V3
 {
     public class Deserializer
     {
-        TypeInfoBinder mBinder = new TypeInfoBinder(new BasicSimplifersProvider());
-        
-        ConcurrentDictionary<TypeInfo,Delegate> mDeserializeMethods = new ConcurrentDictionary<TypeInfo, Delegate>(TypeInfoEqualityComparer.Instance);
+        readonly TypeInfoBinder mBinder = new TypeInfoBinder(new BasicSimplifersProvider());
+        readonly ConcurrentDictionary<TypeInfo,Delegate> mDeserializeMethods = new ConcurrentDictionary<TypeInfo, Delegate>(TypeInfoEqualityComparer.Instance);
         private List<object> mVisitedObjects;
 
         public object Deserialize(Stream s)
@@ -96,7 +95,7 @@ namespace CoolSerializer.V3
         private T DeserializeValue<T>(IDocumentReader reader)
         {
             var info = reader.ReadTypeInfo();
-            var deserializeMethod = (Func<IDocumentReader,T>)mDeserializeMethods.GetOrAdd(info, i => GetDeserializeExpression<T>(i).Compile());
+            var deserializeMethod = (Func<IDocumentReader, T>)mDeserializeMethods.GetOrAdd(info, i => GetDeserializeExpression<T>(i).Compile());
             return deserializeMethod(reader);
         }
 
@@ -109,7 +108,7 @@ namespace CoolSerializer.V3
             {
                 block = Expression.Convert(block, typeof (T));
             }
-            var lambda = Expression.Lambda<Func<IDocumentReader, T>>(block, readerParam);
+            var lambda = Expression.Lambda<Func<IDocumentReader, T>>(block,"deserialize"+boundInfo.RealType.Name, new []{readerParam});
             return lambda;
         }
 
