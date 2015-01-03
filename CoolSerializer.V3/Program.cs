@@ -28,15 +28,15 @@ namespace CoolSerializer.V3
             //        MyInt = 29
             //    }
             //};
-            //var graph = new Dictionary<int, string>
-            //{
-            //    {6,"6"},
-            //    {12,"SAD"},
-            //    {4, "but"},
-            //    {5, "true"}
-            //};
-            var graph = new MyBadClass(67, "89");
-            graph.InitBadClass(graph);
+            var graph = new Dictionary<int, object>
+            {
+                {6,"6"},
+                {12,"SAD"},
+                {4, "but"},
+                {5, "true"},
+                {9, new MyBadClass(67, "89")}
+            };
+            ((MyBadClass)graph[9]).InitBadClass((MyBadClass)graph[9]);
             //((InnerGraphDerived)graph2.Z).Surprise = graph2;
             //((ArrayList) graph2.Coll).Add(graph2);
             //var graph = new List<Graph>() {null, graph2, null, (Graph)graph2};

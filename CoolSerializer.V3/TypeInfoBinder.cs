@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -9,6 +8,12 @@ namespace CoolSerializer.V3
 {
     public class TypeInfoBinder
     {
+        private readonly ISimplifersProvider mSimplifersProvider;
+
+        public TypeInfoBinder(ISimplifersProvider simplifersProvider)
+        {
+            mSimplifersProvider = simplifersProvider;
+        }
         public IBoundTypeInfo Provide(TypeInfo info)
         {
             var realType = Type.GetType(info.Name);
@@ -20,15 +25,11 @@ namespace CoolSerializer.V3
             {
                 return new BoundCollectionTypeInfo(info, realType);
             }
-            
-            if (realType == typeof (KeyValuePair<int, string>))
-            {
-                return new SimplifiedBoundTypeInfo(info,typeof(KVPSimplifier<int,string>));
-            }
 
-            if (realType == typeof (MyBadClass))
+            object simplifer;
+            if (mSimplifersProvider.TryProvide(realType, out simplifer))
             {
-                return new SimplifiedBoundTypeInfo(info,typeof(MyNiceSimplifier));
+                return new SimplifiedBoundTypeInfo(info,simplifer);
             }
 
             var fields = new IBoundFieldInfo[info.Fields.Length];
@@ -177,29 +178,4 @@ namespace CoolSerializer.V3
             return Expression.Assign(Expression.MakeMemberAccess(graphParam, mInfo), graphFieldValue);
         }
     }
-}
-
-public interface ISimpifier<T, TSimple>
-{
-    TSimple Simplify(T obj);
-    T Desimplify(TSimple simpleObj);
-}
-
-public class KVPSimplifier<TKey, TValue> : ISimpifier<KeyValuePair<TKey, TValue>, SimpleKeyValuePair<TKey, TValue>>
-{
-    public SimpleKeyValuePair<TKey, TValue> Simplify(KeyValuePair<TKey, TValue> obj)
-    {
-        return new SimpleKeyValuePair<TKey, TValue>() {Key = obj.Key, Value = obj.Value};
-    }
-
-    public KeyValuePair<TKey, TValue> Desimplify(SimpleKeyValuePair<TKey, TValue> simpleObj)
-    {
-        return new KeyValuePair<TKey, TValue>(simpleObj.Key,simpleObj.Value);
-    }
-}
-
-public struct SimpleKeyValuePair<TKey, TValue>
-{
-    public TKey Key { get; set; }
-    public TValue Value { get; set; }
 }

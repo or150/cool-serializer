@@ -11,10 +11,10 @@ namespace CoolSerializer.V3
     {
         private readonly object mSimplifier;
 
-        public SimplifiedBoundTypeInfo(TypeInfo typeInfo, Type simplifierType) 
-            : base(typeInfo, GetRealType(simplifierType), GetFields(typeInfo,simplifierType))
+        public SimplifiedBoundTypeInfo(TypeInfo typeInfo, object simplifier)
+            : base(typeInfo, GetRealType(simplifier.GetType()), GetFields(typeInfo, simplifier.GetType()))
         {
-            mSimplifier = Activator.CreateInstance(simplifierType);
+            mSimplifier = simplifier;
         }
 
         private static IBoundFieldInfo[] GetFields(TypeInfo typeInfo, Type simplifierType)
