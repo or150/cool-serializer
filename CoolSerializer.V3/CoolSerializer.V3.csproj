@@ -52,7 +52,7 @@
     <Compile Include="StreamDocumentWriter.cs" />
     <Compile Include="TypeExtenstions.cs" />
     <Compile Include="TypeInfo.cs" />
-    <Compile Include="TypeInfoAssemblyBinder.cs" />
+    <Compile Include="TypeInfoBinder.cs" />
     <Compile Include="TypeInfoProvider.cs" />
     <Compile Include="IDocumentReader.cs">
       <DependentUpon>IDocumentReader.tt</DependentUpon>

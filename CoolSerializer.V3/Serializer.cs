@@ -12,7 +12,7 @@ namespace CoolSerializer.V3
     class Serializer
     {
         private readonly TypeInfoProvider mProvider = new TypeInfoProvider();
-        private readonly TypeInfoAssemblyBinder mBinder = new TypeInfoAssemblyBinder();
+        private readonly TypeInfoBinder mBinder = new TypeInfoBinder();
         private ConcurrentDictionary<TypeInfo, Delegate> mSerializeMethods = new ConcurrentDictionary<TypeInfo, Delegate>(TypeInfoEqualityComparer.Instance);
         private Dictionary<object, int> mVisitedObjects;
 

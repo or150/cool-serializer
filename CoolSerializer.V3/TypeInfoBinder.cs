@@ -7,7 +7,7 @@ using System.Reflection;
 
 namespace CoolSerializer.V3
 {
-    public class TypeInfoAssemblyBinder
+    public class TypeInfoBinder
     {
         public IBoundTypeInfo Provide(TypeInfo info)
         {

@@ -10,7 +10,7 @@ namespace CoolSerializer.V3
 {
     class Deserializer
     {
-        TypeInfoAssemblyBinder mBinder = new TypeInfoAssemblyBinder();
+        TypeInfoBinder mBinder = new TypeInfoBinder();
         
         ConcurrentDictionary<TypeInfo,Delegate> mDeserializeMethods = new ConcurrentDictionary<TypeInfo, Delegate>(TypeInfoEqualityComparer.Instance);
         private List<object> mVisitedObjects;
