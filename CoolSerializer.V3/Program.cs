@@ -28,7 +28,15 @@ namespace CoolSerializer.V3
             //        MyInt = 29
             //    }
             //};
-            var graph = new KeyValuePair<int, string>(4, "6");
+            //var graph = new Dictionary<int, string>
+            //{
+            //    {6,"6"},
+            //    {12,"SAD"},
+            //    {4, "but"},
+            //    {5, "true"}
+            //};
+            var graph = new MyBadClass(67, "89");
+            graph.InitBadClass(graph);
             //((InnerGraphDerived)graph2.Z).Surprise = graph2;
             //((ArrayList) graph2.Coll).Add(graph2);
             //var graph = new List<Graph>() {null, graph2, null, (Graph)graph2};
@@ -55,7 +63,7 @@ namespace CoolSerializer.V3
             //    };
             //    return x;
             //}).ToList();
-            
+
             var ser = new Serializer();
             var deserializer = new Deserializer();
             var s = new MemoryStream();
@@ -79,7 +87,7 @@ namespace CoolSerializer.V3
             }
 
             time.Stop();
-            var mps = count/time.Elapsed.TotalSeconds;
+            var mps = count / time.Elapsed.TotalSeconds;
             Console.WriteLine(mps);
             //var asd = new TypeInfo(Guid.NewGuid(), typeof(Program).Name,
             //        new[]
@@ -133,23 +141,50 @@ namespace CoolSerializer.V3
         public int H { get; set; }
     }
 
+    class MyBadClass
+    {
+        public MyBadClass(int i, string s)
+        {
+            S = s;
+            I = i;
+        }
+
+        public void InitBadClass(MyBadClass badClass)
+        {
+            BadBadClass = badClass;
+        }
+
+        public int I { get; private set; }
+        public string S { get; private set; }
+        public MyBadClass BadBadClass { get; private set; }
+    }
+
+    class MyGoodClass
+    {
+        public int I { get; set; }
+        public string S { get; set; }
+        public MyBadClass BadBadClass { get; set; }
+    }
+
+    class MyNiceSimplifier : ISimpifier<MyBadClass, MyGoodClass>
+    {
+        public MyGoodClass Simplify(MyBadClass obj)
+        {
+            return new MyGoodClass() { I = obj.I, S = obj.S, BadBadClass = obj.BadBadClass };
+        }
+
+        public MyBadClass Desimplify(MyGoodClass simpleObj)
+        {
+            var x=  new MyBadClass(simpleObj.I, simpleObj.S);
+            x.InitBadClass(simpleObj.BadBadClass);
+            return x;
+        }
+    }
+
     class InnerGraphDerived : InnerGraph
     {
         public int? MyInt { get; set; }
         public string Prop { get; set; }
         public object Surprise { get; set; }
-    }
-
-    class TypeInfoDescriptorProvider
-    {
-        public TypeDescriptor Provide(TypeInfo info)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    class TypeDescriptor
-    {
-
     }
 }

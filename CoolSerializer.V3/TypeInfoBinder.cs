@@ -20,9 +20,15 @@ namespace CoolSerializer.V3
             {
                 return new BoundCollectionTypeInfo(info, realType);
             }
+            
             if (realType == typeof (KeyValuePair<int, string>))
             {
                 return new SimplifiedBoundTypeInfo(info,typeof(KVPSimplifier<int,string>));
+            }
+
+            if (realType == typeof (MyBadClass))
+            {
+                return new SimplifiedBoundTypeInfo(info,typeof(MyNiceSimplifier));
             }
 
             var fields = new IBoundFieldInfo[info.Fields.Length];
@@ -102,7 +108,7 @@ namespace CoolSerializer.V3
             return Expression.Block(fieldDeserializeExprs);
         }
 
-        private Expression GetCreateExpression()
+        protected virtual Expression GetCreateExpression()
         {
             return Expression.New(RealType);
         }
@@ -122,68 +128,6 @@ namespace CoolSerializer.V3
 
     }
 
-    public class SimplifiedBoundTypeInfo : BoundTypeInfo
-    {
-        private object mSimplifier;
-
-        public SimplifiedBoundTypeInfo(TypeInfo typeInfo, Type simplifierType) 
-            : base(typeInfo, GetRealType(simplifierType), GetFields(typeInfo,simplifierType))
-        {
-            mSimplifier = Activator.CreateInstance(simplifierType);
-        }
-
-        private static IBoundFieldInfo[] GetFields(TypeInfo typeInfo, Type simplifierType)
-        {
-            var type = GetSimplifiedType(simplifierType);
-            IBoundFieldInfo[] fields = new IBoundFieldInfo[typeInfo.Fields.Length];
-            for (int i = 0; i < fields.Length; i++)
-            {
-                fields[i] = new BoundFieldInfo(type,typeInfo.Fields[i]);
-            }
-            return fields;
-        }
-
-        private static Type GetRealType(Type simplifierType)
-        {
-            return GetSimplifierType(simplifierType).GetGenericArguments()[0];
-        }
-        private static Type GetSimplifiedType(Type simplifierType)
-        {
-            return GetSimplifierType(simplifierType).GetGenericArguments()[1];
-        }
-
-        private static Type GetSimplifierType(Type simplifierType)
-        {
-            return simplifierType.GetInterfaces()
-                .First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof (ISimpifier<,>));
-        }
-
-        protected override Expression GetFieldsSerializeExpressions(Expression writerParam, Expression graphParam, Serializer serializer)
-        {
-            var simplfiyMethod = GetSimplifierType(mSimplifier.GetType()).GetMethod("Simplify");
-            var simplify = Expression.Call(Expression.Constant(mSimplifier), simplfiyMethod, graphParam);
-            var simplifiedParam = Expression.Parameter(GetSimplifiedType(mSimplifier.GetType()), "simplifiedGraph");
-            var assSimplified = Expression.Assign(simplifiedParam, simplify);
-            var serializeSimplified = base.GetFieldsSerializeExpressions(writerParam, simplifiedParam, serializer);
-            return Expression.Block(new[] {simplifiedParam}, assSimplified, serializeSimplified);
-        }
-
-        protected override Expression GetFieldsDeserializeExpressions(Expression readerParam, Expression graphParam, Deserializer deserializer)
-        {
-            var desimpliyMethod = GetSimplifierType(mSimplifier.GetType()).GetMethod("Desimplify");
-            var simplifiedParam = Expression.Parameter(GetSimplifiedType(mSimplifier.GetType()), "simplifiedGraph");
-            var deserializeExpr =  base.GetFieldsDeserializeExpressions(readerParam, simplifiedParam, deserializer);
-            var desimplify = Expression.Call(Expression.Constant(mSimplifier), desimpliyMethod, simplifiedParam);
-            var assignment = GetAssignExpr(graphParam, desimplify);
-            return Expression.Block(new[] {simplifiedParam}, deserializeExpr, assignment);
-        }
-
-        private Expression GetAssignExpr(Expression graphParam, Expression desimplifiedValue)
-        {
-            return Expression.Assign(graphParam, desimplifiedValue);
-            throw new NotImplementedException();
-        }
-    }
     public interface IBoundFieldInfo
     {
         Type RealType { get; }

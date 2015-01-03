@@ -49,6 +49,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Serializer.cs" />
+    <Compile Include="SimplifiedBoundTypeInfo.cs" />
     <Compile Include="StreamDocumentReader.cs" />
     <Compile Include="StreamDocumentWriter.cs" />
     <Compile Include="TypeExtenstions.cs" />
