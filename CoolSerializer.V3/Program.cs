@@ -11,27 +11,28 @@ namespace CoolSerializer.V3
     {
         static void Main(string[] args)
         {
-            var graph2 = new Graph()
-            {
-                Arr = new[] { 1, 3, 4, 5 },
-                Coll = new ArrayList() { 4, 5, 6, 7, null,9 },
-                S = new InnerStruct
-                {
-                    I = 5,
-                    L = 1
-                },
-                Z = new InnerGraphDerived()
-                {
-                    H = 6,
-                    Prop = "asd",
-                    Surprise = null,
-                    MyInt = 29
-                }
-            };
-            ((InnerGraphDerived)graph2.Z).Surprise = graph2;
-            ((ArrayList) graph2.Coll).Add(graph2);
-            var graph = new List<Graph>() {null, graph2, null, (Graph)graph2};
-            ((ArrayList)graph2.Coll).Add(graph);
+            //var graph = new Graph()
+            //{
+            //    //Arr = new[] { 1, 3, 4, 5 },
+            //    //Coll = new ArrayList() { 4, 5, 6, 7, null,9 },
+            //    S = new InnerStruct
+            //    {
+            //        I = 5,
+            //        L = 1
+            //    },
+            //    Z = new InnerGraphDerived()
+            //    {
+            //        H = 6,
+            //        Prop = "asd",
+            //        Surprise = null,
+            //        MyInt = 29
+            //    }
+            //};
+            var graph = new KeyValuePair<int, string>(4, "6");
+            //((InnerGraphDerived)graph2.Z).Surprise = graph2;
+            //((ArrayList) graph2.Coll).Add(graph2);
+            //var graph = new List<Graph>() {null, graph2, null, (Graph)graph2};
+            //((ArrayList)graph2.Coll).Add(graph);
 
             //var coll = Enumerable.Range(0, 300).Select(e =>
             //{
@@ -113,8 +114,8 @@ namespace CoolSerializer.V3
 
     public class Graph
     {
-        public int[] Arr { get; set; }
-        public ICollection Coll { get; set; }
+        //public int[] Arr { get; set; }
+        //public ICollection Coll { get; set; }
         public int X { get; set; }
         public int Y { get; set; }
         public InnerGraph Z { get; set; }

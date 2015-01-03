@@ -20,6 +20,10 @@ namespace CoolSerializer.V3
             {
                 return new BoundCollectionTypeInfo(info, realType);
             }
+            if (realType == typeof (KeyValuePair<int, string>))
+            {
+                return new SimplifiedBoundTypeInfo(info,typeof(KVPSimplifier<int,string>));
+            }
 
             var fields = new IBoundFieldInfo[info.Fields.Length];
             for (int i = 0; i < fields.Length; i++)
@@ -39,9 +43,8 @@ namespace CoolSerializer.V3
     {
         Type RealType { get; }
         TypeInfo TypeInfo { get; }
-        IEnumerable<Expression> GetFieldsSerializeExpressions(Expression writerParam, Expression graphParam, Serializer serializer);
-        Expression GetDeserializeExpression(Expression readerParam, Deserializer deserializer);
         Expression GetSerializeExpression(Expression graphParam, Expression writerParam, Serializer serializer);
+        Expression GetDeserializeExpression(Expression readerParam, Deserializer deserializer);
     }
 
     public class BoundTypeInfo : IBoundTypeInfo
@@ -58,19 +61,6 @@ namespace CoolSerializer.V3
         public IBoundFieldInfo[] Fields { get; private set; }
 
 
-        public Expression GetDeserializeExpression(Expression readerParam, Deserializer deserializer)
-        {
-            var retValParam = Expression.Variable(this.RealType, "retVal");
-            var creation = this.GetCreateExpression();
-            var retValAssignment = Expression.Assign(retValParam, creation);
-            var addToVisitedObjects = deserializer.GetAddToVisitedObjectsExpr(this, retValParam);
-            var fieldDeserializeExprs = this.GetFieldsDeserializeExpressions(readerParam, retValParam, deserializer);
-
-            var block = Expression.Block(new[] { retValParam },
-                new[] { retValAssignment, addToVisitedObjects }.Concat(fieldDeserializeExprs).Concat(new[] { retValParam }));
-            return block;
-        }
-
         public Expression GetSerializeExpression(Expression graphParam, Expression writerParam, Serializer serializer)
         {
             var castedGraph = Expression.Variable(this.RealType, "castedGraph");
@@ -82,11 +72,24 @@ namespace CoolSerializer.V3
             var fieldSerializeExprs = this.GetFieldsSerializeExpressions(writerParam, castedGraph, serializer);
 
             var block = Expression.Block(new[] { castedGraph },
-                new Expression[] { castExpression, writeHeaderExpr, writeTypeInfoExpr }.Concat(fieldSerializeExprs));
+                new Expression[] { castExpression, writeHeaderExpr, writeTypeInfoExpr }.Concat(new []{fieldSerializeExprs}));
             return block;
         }
 
-        private IEnumerable<Expression> GetFieldsDeserializeExpressions(Expression readerParam, Expression graphParam, Deserializer deserializer)
+        public Expression GetDeserializeExpression(Expression readerParam, Deserializer deserializer)
+        {
+            var retValParam = Expression.Variable(this.RealType, "retVal");
+            var creation = this.GetCreateExpression();
+            var retValAssignment = Expression.Assign(retValParam, creation);
+            var addToVisitedObjects = deserializer.GetAddToVisitedObjectsExpr(this, retValParam);
+            var fieldDeserializeExprs = this.GetFieldsDeserializeExpressions(readerParam, retValParam, deserializer);
+
+            var block = Expression.Block(new[] { retValParam },
+                new[] { retValAssignment, addToVisitedObjects }.Concat(new []{fieldDeserializeExprs}).Concat(new[] { retValParam }));
+            return block;
+        }
+
+        protected virtual Expression GetFieldsDeserializeExpressions(Expression readerParam, Expression graphParam, Deserializer deserializer)
         {
             var fieldDeserializeExprs = new List<Expression>();
 
@@ -96,7 +99,7 @@ namespace CoolSerializer.V3
                 var assignment = field.GetSetExpression(graphParam, castedDes);
                 fieldDeserializeExprs.Add(assignment);
             }
-            return fieldDeserializeExprs;
+            return Expression.Block(fieldDeserializeExprs);
         }
 
         private Expression GetCreateExpression()
@@ -104,7 +107,7 @@ namespace CoolSerializer.V3
             return Expression.New(RealType);
         }
 
-        public IEnumerable<Expression> GetFieldsSerializeExpressions(Expression writerParam, Expression graphParam, Serializer serializer)
+        protected virtual Expression GetFieldsSerializeExpressions(Expression writerParam, Expression graphParam, Serializer serializer)
         {
             var fieldSerializeExprs = new List<Expression>();
 
@@ -114,23 +117,37 @@ namespace CoolSerializer.V3
                 var serializeExpression = serializer.GetRightSerializeMethod(writerParam, fieldAccessExpression, field);
                 fieldSerializeExprs.Add(serializeExpression);
             }
-            return fieldSerializeExprs;
+            return Expression.Block(fieldSerializeExprs);
         }
 
     }
 
     public class SimplifiedBoundTypeInfo : BoundTypeInfo
     {
-        public SimplifiedBoundTypeInfo(TypeInfo typeInfo, Type simplifierType, IBoundFieldInfo[] fields) 
-            : base(typeInfo, GetRealType(simplifierType), fields)
+        private object mSimplifier;
+
+        public SimplifiedBoundTypeInfo(TypeInfo typeInfo, Type simplifierType) 
+            : base(typeInfo, GetRealType(simplifierType), GetFields(typeInfo,simplifierType))
         {
+            mSimplifier = Activator.CreateInstance(simplifierType);
+        }
+
+        private static IBoundFieldInfo[] GetFields(TypeInfo typeInfo, Type simplifierType)
+        {
+            var type = GetSimplifiedType(simplifierType);
+            IBoundFieldInfo[] fields = new IBoundFieldInfo[typeInfo.Fields.Length];
+            for (int i = 0; i < fields.Length; i++)
+            {
+                fields[i] = new BoundFieldInfo(type,typeInfo.Fields[i]);
+            }
+            return fields;
         }
 
         private static Type GetRealType(Type simplifierType)
         {
             return GetSimplifierType(simplifierType).GetGenericArguments()[0];
         }
-        private static Type GetSimplifiedTypeType(Type simplifierType)
+        private static Type GetSimplifiedType(Type simplifierType)
         {
             return GetSimplifierType(simplifierType).GetGenericArguments()[1];
         }
@@ -139,6 +156,32 @@ namespace CoolSerializer.V3
         {
             return simplifierType.GetInterfaces()
                 .First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof (ISimpifier<,>));
+        }
+
+        protected override Expression GetFieldsSerializeExpressions(Expression writerParam, Expression graphParam, Serializer serializer)
+        {
+            var simplfiyMethod = GetSimplifierType(mSimplifier.GetType()).GetMethod("Simplify");
+            var simplify = Expression.Call(Expression.Constant(mSimplifier), simplfiyMethod, graphParam);
+            var simplifiedParam = Expression.Parameter(GetSimplifiedType(mSimplifier.GetType()), "simplifiedGraph");
+            var assSimplified = Expression.Assign(simplifiedParam, simplify);
+            var serializeSimplified = base.GetFieldsSerializeExpressions(writerParam, simplifiedParam, serializer);
+            return Expression.Block(new[] {simplifiedParam}, assSimplified, serializeSimplified);
+        }
+
+        protected override Expression GetFieldsDeserializeExpressions(Expression readerParam, Expression graphParam, Deserializer deserializer)
+        {
+            var desimpliyMethod = GetSimplifierType(mSimplifier.GetType()).GetMethod("Desimplify");
+            var simplifiedParam = Expression.Parameter(GetSimplifiedType(mSimplifier.GetType()), "simplifiedGraph");
+            var deserializeExpr =  base.GetFieldsDeserializeExpressions(readerParam, simplifiedParam, deserializer);
+            var desimplify = Expression.Call(Expression.Constant(mSimplifier), desimpliyMethod, simplifiedParam);
+            var assignment = GetAssignExpr(graphParam, desimplify);
+            return Expression.Block(new[] {simplifiedParam}, deserializeExpr, assignment);
+        }
+
+        private Expression GetAssignExpr(Expression graphParam, Expression desimplifiedValue)
+        {
+            return Expression.Assign(graphParam, desimplifiedValue);
+            throw new NotImplementedException();
         }
     }
     public interface IBoundFieldInfo
