@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,13 +13,15 @@ namespace CoolSerializer.V3
     {
         private readonly TypeInfoProvider mProvider = new TypeInfoProvider();
         private readonly TypeInfoAssemblyBinder mBinder = new TypeInfoAssemblyBinder();
+        private ConcurrentDictionary<TypeInfo, Delegate> mSerializeMethods = new ConcurrentDictionary<TypeInfo, Delegate>(TypeInfoEqualityComparer.Instance);
         private Dictionary<object, int> mVisitedObjects;
 
         public void Serialize(Stream stream, object graph)
         {
             mVisitedObjects = new Dictionary<object, int>();
+            mVisitedObjects.Clear();
             var writer = new StreamDocumentWriter(stream);
-            SerializeComplex(writer,graph);
+            SerializeComplex(writer, graph);
         }
 
         private void Box(IDocumentWriter writer, object graph, FieldType expectedType)
@@ -29,52 +32,52 @@ namespace CoolSerializer.V3
             switch (expectedType)
             {
                 case FieldType.Boolean:
-                    writer.WriteBoolean((Boolean) graph);
+                    writer.WriteBoolean((Boolean)graph);
                     break;
                 case FieldType.Char:
-                    writer.WriteChar((Char) graph);
+                    writer.WriteChar((Char)graph);
                     break;
                 case FieldType.SByte:
-                    writer.WriteSByte((SByte) graph);
+                    writer.WriteSByte((SByte)graph);
                     break;
                 case FieldType.Byte:
-                    writer.WriteByte((Byte) graph);
+                    writer.WriteByte((Byte)graph);
                     break;
                 case FieldType.Int16:
-                    writer.WriteInt16((Int16) graph);
+                    writer.WriteInt16((Int16)graph);
                     break;
                 case FieldType.UInt16:
-                    writer.WriteUInt16((UInt16) graph);
+                    writer.WriteUInt16((UInt16)graph);
                     break;
                 case FieldType.Int32:
-                    writer.WriteInt32((Int32) graph);
+                    writer.WriteInt32((Int32)graph);
                     break;
                 case FieldType.UInt32:
-                    writer.WriteUInt32((UInt32) graph);
+                    writer.WriteUInt32((UInt32)graph);
                     break;
                 case FieldType.Int64:
-                    writer.WriteInt64((Int64) graph);
+                    writer.WriteInt64((Int64)graph);
                     break;
                 case FieldType.UInt64:
-                    writer.WriteUInt64((UInt64) graph);
+                    writer.WriteUInt64((UInt64)graph);
                     break;
                 case FieldType.Single:
-                    writer.WriteSingle((Single) graph);
+                    writer.WriteSingle((Single)graph);
                     break;
                 case FieldType.Double:
-                    writer.WriteDouble((Double) graph);
+                    writer.WriteDouble((Double)graph);
                     break;
                 case FieldType.Decimal:
-                    writer.WriteDecimal((Decimal) graph);
+                    writer.WriteDecimal((Decimal)graph);
                     break;
                 case FieldType.DateTime:
-                    writer.WriteDateTime((DateTime) graph);
+                    writer.WriteDateTime((DateTime)graph);
                     break;
                 case FieldType.Guid:
-                    writer.WriteGuid((Guid) graph);
+                    writer.WriteGuid((Guid)graph);
                     break;
                 case FieldType.String:
-                    writer.WriteString((String) graph);
+                    writer.WriteString((String)graph);
                     break;
                 default:
                     throw new NotImplementedException();
@@ -83,24 +86,26 @@ namespace CoolSerializer.V3
 
         private void SerializeComplex<T>(IDocumentWriter writer, T graph)
         {
-            var rawType = mProvider.ProvideRawType(graph);
-            if (rawType != FieldType.Object)
+            var info = mProvider.Provide(graph);
+            if (info.RawType != FieldType.Object)
             {
-                Box(writer,graph,rawType);
-                return;
-            }
-            else if(graph == null)
-            {
-                writer.WriteByte((byte) ComplexHeader.Null);
+                Box(writer, graph, info.RawType);
                 return;
             }
 
-            var info = mProvider.Provide(graph);
+            if (graph == null)
+            {
+                writer.WriteByte((byte)ComplexHeader.Null);
+                return;
+            }
+
             if (!info.IsAlwaysByVal && WriteRevisited(writer, graph))
             {
                 return;
             }
-            GetSerializeExpression<T>(info).Compile()(writer, graph);
+
+            var serializeMethod = (Action<IDocumentWriter, T>)mSerializeMethods.GetOrAdd(info, i => GetSerializeExpression<T>(i).Compile());
+            serializeMethod(writer, graph);
         }
 
         private bool WriteRevisited<T>(IDocumentWriter writer, T graph)
@@ -130,17 +135,17 @@ namespace CoolSerializer.V3
             //}
 
             var boundInfo = mBinder.Provide(info);
-            var writerParam = Expression.Parameter(typeof (IDocumentWriter), "writer");
-            var graphParam = Expression.Parameter(typeof (T), "graph");
-            var castedGraph = Expression.Variable(boundInfo.RealType,"castedGraph");
+            var writerParam = Expression.Parameter(typeof(IDocumentWriter), "writer");
+            var graphParam = Expression.Parameter(typeof(T), "graph");
+            var castedGraph = Expression.Variable(boundInfo.RealType, "castedGraph");
             var castExpression = Expression.Assign(castedGraph, Expression.Convert(graphParam, boundInfo.RealType));
-            var writeHeaderExpr = Expression.Call(writerParam, "WriteByte", null, Expression.Constant((byte) ComplexHeader.Value));
+            var writeHeaderExpr = Expression.Call(writerParam, "WriteByte", null, Expression.Constant((byte)ComplexHeader.Value));
             var writeTypeInfoExpr = Expression.Call(writerParam, "WriteTypeInfo", null, Expression.Constant(info));
 
             var fieldSerializeExprs = GetSerializeExpressions(boundInfo, writerParam, castedGraph);
 
-            var block = Expression.Block(new[] {castedGraph},
-                new Expression[] {castExpression, writeHeaderExpr, writeTypeInfoExpr}.Concat(fieldSerializeExprs));
+            var block = Expression.Block(new[] { castedGraph },
+                new Expression[] { castExpression, writeHeaderExpr, writeTypeInfoExpr }.Concat(fieldSerializeExprs));
             var lambda = Expression.Lambda<Action<IDocumentWriter, T>>(block, writerParam, graphParam);
             return lambda;
         }
@@ -164,12 +169,12 @@ namespace CoolSerializer.V3
             var rawType = fieldType.FieldInfo.Type;
             if (rawType == FieldType.Object)
             {
-                 var serializeField = Expression.Call
-                    (Expression.Constant(this),
-                        "SerializeComplex",
-                        new[]{fieldType.RealType},
-                        writerParam,
-                        fieldExpression);
+                var serializeField = Expression.Call
+                   (Expression.Constant(this),
+                       "SerializeComplex",
+                       new[] { fieldType.RealType },
+                       writerParam,
+                       fieldExpression);
                 return serializeField;
             }
             //else if (rawType == FieldType.ObjectByVal)
@@ -178,7 +183,7 @@ namespace CoolSerializer.V3
             //    return Expression.Block(GetSerializeExpressions(fieldInfo, writerParam, fieldExpression));
             //}
 
-            var serializeMethod = typeof (IDocumentWriter).GetMethods
+            var serializeMethod = typeof(IDocumentWriter).GetMethods
                 (BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
                 .First(m => m.GetParameters()[0].ParameterType == fieldType.RealType);
             var serializeExpression = Expression.Call(writerParam, serializeMethod, fieldExpression);

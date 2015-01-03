@@ -104,6 +104,7 @@ namespace CoolSerializer.V3
             {
                 mGuidWriter.SerializeGuid(mStream, i.Guid);
                 mBinaryWriter.Write(i.Name);
+                mBinaryWriter.Write((byte) i.RawType);
                 mBinaryWriter.Write(i.IsAlwaysByVal);
                 mBinaryWriter.Write(i.Fields.Length);
                 foreach (var fieldInfo in i.Fields)

@@ -108,6 +108,7 @@ namespace CoolSerializer.V3
             }
 
             var name = mBinaryReader.ReadString();
+            var rawType = (FieldType)mBinaryReader.ReadByte();
             var isAlwaysByVal = mBinaryReader.ReadBoolean();
             var fieldsCount = ReadInt32();
             var fields = new FieldInfo[fieldsCount];
@@ -118,7 +119,7 @@ namespace CoolSerializer.V3
                 fields[i] = new FieldInfo(type, fieldName);
             }
 
-            return new TypeInfo(guid, name, fields, isAlwaysByVal);
+            return new TypeInfo(guid, name, rawType, fields, isAlwaysByVal);
         }
     }
 }

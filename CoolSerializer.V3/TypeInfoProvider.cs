@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
@@ -6,6 +8,7 @@ namespace CoolSerializer.V3
 {
     public class TypeInfoProvider
     {
+        readonly ConcurrentDictionary<Type,TypeInfo> mInfos = new ConcurrentDictionary<Type, TypeInfo>(EqualityComparer<Type>.Default);
         static class TypeInfoHelper<T>
         {
             private static FieldType mRawType;
@@ -16,11 +19,7 @@ namespace CoolSerializer.V3
             {
                 mRawType = typeof (T).GetRawType();
                 mIsClass = !typeof (T).IsValueType || Nullable.GetUnderlyingType(typeof(T)) != null;
-                mType = Nullable.GetUnderlyingType(typeof (T)) ?? typeof (T);
-            }
-            public static FieldType ProvideRawType(T graph)
-            {
-                return mIsClass && graph != null ? graph.GetType().GetRawType() : mRawType;
+                mType = typeof (T);
             }
 
             public static Type ProvideType(T graph)
@@ -31,12 +30,8 @@ namespace CoolSerializer.V3
         public TypeInfo Provide<T>(T graph)
         {
             var type = TypeInfoHelper<T>.ProvideType(graph);
-            return new TypeInfo(Guid.NewGuid(), type.FullName, ProvideFields(type), type.IsValueType);
-        }
-
-        public FieldType ProvideRawType<T>(T graph)
-        {
-            return TypeInfoHelper<T>.ProvideRawType(graph);
+            return mInfos.GetOrAdd(type,
+                (t) => new TypeInfo(Guid.NewGuid(), t.FullName, t.GetRawType(), ProvideFields(t), t.IsValueType));
         }
 
         private FieldInfo[] ProvideFields(Type type)

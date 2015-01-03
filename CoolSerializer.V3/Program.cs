@@ -20,7 +20,7 @@ namespace CoolSerializer.V3
                     H = 6,
                     Prop = "asd",
                     Surprise = null,
-                    MyInt = null
+                    MyInt = 29
                 }
             };
             ((InnerGraphDerived)graph.Z).Surprise = graph;
@@ -38,13 +38,20 @@ namespace CoolSerializer.V3
             s.Position = 0;
             deserializer.Deserialize(s);
 
-            var time  = Stopwatch.StartNew();
             var count = 1000 * 1000;
-            for (int i = 0; i < count ; i++)
+
+            var time = Stopwatch.StartNew();
+            for (int i = 0; i < count; i++)
             {
                 s.Position = 0;
-                var obj = deserializer.Deserialize(s);   
+                ser.Serialize(s, graph);
             }
+
+            //for (int i = 0; i < count ; i++)
+            //{
+            //    s.Position = 0;
+            //    var obj = deserializer.Deserialize(s);   
+            //}
 
             time.Stop();
             var mps = count/time.Elapsed.TotalSeconds;
