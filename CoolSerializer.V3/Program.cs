@@ -12,8 +12,8 @@ namespace CoolSerializer.V3
         {
             object graph = new Graph()
             {
-                Arr = new []{1,3,4,5},
-                Coll = new ArrayList(){4,5,6,7},
+                Arr = new[] { 1, 3, 4, 5 },
+                Coll = new ArrayList() { 4, 5, 6, 7, null },
                 S = new InnerStruct
                 {
                     I = 5,
@@ -28,7 +28,7 @@ namespace CoolSerializer.V3
                 }
             };
             ((InnerGraphDerived)((Graph)graph).Z).Surprise = graph;
-            graph = new List<Graph>() {(Graph) graph};
+            graph = new List<Graph>() {null, (Graph) graph, null, (Graph)graph};
             //var graph = new InnerGraphDerived()
             //{
             //    H = 6,

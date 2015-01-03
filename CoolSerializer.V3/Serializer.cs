@@ -117,7 +117,7 @@ namespace CoolSerializer.V3
                 writer.WriteInt32(id);
                 return true;
             }
-            mVisitedObjects[graph] = id;
+            mVisitedObjects[graph] = mVisitedObjects.Count;
             return false;
         }
 
