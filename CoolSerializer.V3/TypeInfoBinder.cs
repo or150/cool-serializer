@@ -139,10 +139,6 @@ namespace CoolSerializer.V3
             var block =  Expression.Block(new[] {enumerator}, enumratorAssignment, forEach);
             return block;
         }
-        public Expression GetCreateExpression()
-        {
-            throw new NotImplementedException();
-        }
     }
 
     public class BoundCollectionFieldInfo : IVariableBoundFieldInfo

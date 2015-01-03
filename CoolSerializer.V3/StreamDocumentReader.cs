@@ -119,7 +119,7 @@ namespace CoolSerializer.V3
                 fields[i] = new FieldInfo(type, fieldName);
             }
 
-            return new TypeInfo(guid, name, rawType, fields, isAlwaysByVal);
+            return mInfos[guid] = new TypeInfo(guid, name, rawType, fields, isAlwaysByVal);
         }
     }
 }
