@@ -104,24 +104,11 @@ namespace CoolSerializer.V3
         {
             var boundInfo = mBinder.Provide(info);
             var readerParam = Expression.Parameter(typeof(IDocumentReader), "reader");
-            var block = GetX(boundInfo, readerParam);
+            var block = boundInfo.GetDeserializeExpression(readerParam, this);
             var lambda = Expression.Lambda<Func<IDocumentReader, T>>(block, readerParam);
             return lambda;
         }
 
-
-        private Expression GetX(IBoundTypeInfo boundInfo, Expression readerParam)
-        {
-            var retValParam = Expression.Variable(boundInfo.RealType, "retVal");
-            var creation = boundInfo.GetCreateExpression();
-            var retValAssignment = Expression.Assign(retValParam, creation);
-            var addToVisitedObjects = GetAddToVisitedObjectsExpr(boundInfo, retValParam);
-            var fieldDeserializeExprs = boundInfo.GetFieldsDeserializeExpressions(readerParam, retValParam, this);
-
-            var block = Expression.Block(new[] {retValParam},
-                new[] {retValAssignment, addToVisitedObjects}.Concat(fieldDeserializeExprs).Concat(new[] {retValParam}));
-            return block;
-        }
 
         public Expression GetAddToVisitedObjectsExpr(IBoundTypeInfo boundInfo, ParameterExpression retValParam)
         {

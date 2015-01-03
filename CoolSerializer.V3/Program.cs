@@ -10,10 +10,10 @@ namespace CoolSerializer.V3
     {
         static void Main(string[] args)
         {
-            object graph = new Graph()
+            var graph2 = new Graph()
             {
                 Arr = new[] { 1, 3, 4, 5 },
-                Coll = new ArrayList() { 4, 5, 6, 7, null },
+                Coll = new ArrayList() { 4, 5, 6, 7, null,9 },
                 S = new InnerStruct
                 {
                     I = 5,
@@ -27,8 +27,10 @@ namespace CoolSerializer.V3
                     MyInt = 29
                 }
             };
-            ((InnerGraphDerived)((Graph)graph).Z).Surprise = graph;
-            graph = new List<Graph>() {null, (Graph) graph, null, (Graph)graph};
+            ((InnerGraphDerived)graph2.Z).Surprise = graph2;
+            ((ArrayList) graph2.Coll).Add(graph2);
+            var graph = new List<Graph>() {null, (Graph) graph2, null, (Graph)graph2};
+            ((ArrayList)graph2.Coll).Add(graph);
             //var graph = new InnerGraphDerived()
             //{
             //    H = 6,
