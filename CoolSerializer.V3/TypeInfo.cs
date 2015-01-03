@@ -42,7 +42,6 @@ namespace CoolSerializer.V3
 
         public FieldType Type { get; private set; }
         public string Name { get; private set; }
-        //public bool IsNullable { get; private set; }
         public override string ToString()
         {
             return string.Format("{0} {1}", Type.ToString(), Name.ToString());

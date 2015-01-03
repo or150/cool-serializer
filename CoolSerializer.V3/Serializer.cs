@@ -83,16 +83,19 @@ namespace CoolSerializer.V3
 
         private void SerializeComplex<T>(IDocumentWriter writer, T graph)
         {
-            var type = graph.GetType();
-            var rawType = type.GetRawType();
-
+            var rawType = mProvider.ProvideRawType(graph);
             if (rawType != FieldType.Object)
             {
                 Box(writer,graph,rawType);
                 return;
             }
+            else if(graph == null)
+            {
+                writer.WriteByte((byte) ComplexHeader.Null);
+                return;
+            }
 
-            var info = mProvider.Provide(type);
+            var info = mProvider.Provide(graph);
             if (!info.IsAlwaysByVal && WriteRevisited(writer, graph))
             {
                 return;

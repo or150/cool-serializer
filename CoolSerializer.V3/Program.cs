@@ -19,11 +19,11 @@ namespace CoolSerializer.V3
                 {
                     H = 6,
                     Prop = "asd",
-                    Surprise = 7ul,
-                    //MyInt = 5
+                    Surprise = null,
+                    MyInt = null
                 }
             };
-            ((InnerGraphDerived) graph.Z).Surprise = graph;
+            ((InnerGraphDerived)graph.Z).Surprise = graph;
 
             //var graph = new InnerGraphDerived()
             //{
@@ -101,7 +101,7 @@ namespace CoolSerializer.V3
 
     class InnerGraphDerived : InnerGraph
     {
-        //public int? MyInt { get; set; }
+        public int? MyInt { get; set; }
         public string Prop { get; set; }
         public object Surprise { get; set; }
     }
