@@ -11,36 +11,36 @@ namespace CoolSerializer.V3
     {
         static void Main(string[] args)
         {
-            //var graph = new Graph()
-            //{
-            //    //Arr = new[] { 1, 3, 4, 5 },
-            //    //Coll = new ArrayList() { 4, 5, 6, 7, null,9 },
-            //    S = new InnerStruct
-            //    {
-            //        I = 5,
-            //        L = 1
-            //    },
-            //    Z = new InnerGraphDerived()
-            //    {
-            //        H = 6,
-            //        Prop = "asd",
-            //        Surprise = null,
-            //        MyInt = 29
-            //    }
-            //};
-
-            //((InnerGraphDerived)graph.Z).Surprise = graph;
-
-
-            var graph = new Dictionary<int, object>
+            var graph = new Graph()
             {
-                {6,"6"},
-                {12,"SAD"},
-                {4, "but"},
-                {5, "true"},
-                {9, new MyBadClass(67, "89")}
+                Arr = new[] { 1, 3, 4, 5 },
+                Coll = new ArrayList() { 4, 5, 6, 7, null, 9 },
+                S = new InnerStruct
+                {
+                    I = 5,
+                    L = 1
+                },
+                Z = new InnerGraphDerived()
+                {
+                    H = 6,
+                    Prop = "asd",
+                    Surprise = null,
+                    MyInt = 29
+                }
             };
-            ((MyBadClass)graph[9]).InitBadClass((MyBadClass)graph[9]);
+
+            ((InnerGraphDerived)graph.Z).Surprise = graph;
+
+
+            //var graph = new Dictionary<int, object>
+            //{
+            //    {6,"6"},
+            //    {12,"SAD"},
+            //    {4, "but"},
+            //    {5, "true"},
+            //    {9, new MyBadClass(67, "89")}
+            //};
+            //((MyBadClass)graph[9]).InitBadClass((MyBadClass)graph[9]);
 
 
             //var graph = new Graph() {Z = new InnerGraph() {H = 9}};
@@ -137,8 +137,8 @@ namespace CoolSerializer.V3
 
     public class Graph
     {
-        //public int[] Arr { get; set; }
-        //public ICollection Coll { get; set; }
+        public int[] Arr { get; set; }
+        public ICollection Coll { get; set; }
         public int X { get; set; }
         public int Y { get; set; }
         public InnerGraph Z { get; set; }

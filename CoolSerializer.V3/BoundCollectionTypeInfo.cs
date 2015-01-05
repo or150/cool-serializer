@@ -35,7 +35,7 @@ namespace CoolSerializer.V3
         {
             TypeInfo = info;
             RealType = realType;
-            mElementInfo = new BoundCollectionFieldInfo(realType);
+            mElementInfo = realType.IsArray ? new BoundArrayFieldInfo(realType) : new BoundCollectionFieldInfo(realType);
         }
 
         public Type RealType { get; private set; }
@@ -67,7 +67,7 @@ namespace CoolSerializer.V3
             var iParam = Expression.Parameter(typeof (int), "i");
             var range = new Func<int, int, IEnumerable<int>>(Enumerable.Range).Method;
             var castedDes = deserializer.GetRightDeserializeMethod(readerParam, mElementInfo);
-            var collectionAdd = GetAddExpression(graphParam, iParam,castedDes);
+            var collectionAdd = mElementInfo.GetSetExpression(graphParam, castedDes, (Expression) iParam);
             var iteration = ForEach(typeof (int), Expression.Call(range, Expression.Constant(0), countParam), iParam, collectionAdd);
             var block = Expression.Block(new[] {iParam}, iteration);
             yield return block;
@@ -80,16 +80,6 @@ namespace CoolSerializer.V3
                 return Expression.NewArrayBounds(mElementInfo.RealType, count);
             }
             return Expression.New(RealType);
-        }
-
-        private Expression GetAddExpression(Expression collectionParam, Expression iParam, Expression itemParam)
-        {
-            if (RealType.IsArray)
-            {
-                return Expression.Assign(Expression.ArrayAccess(collectionParam, iParam), itemParam);
-            }
-            var addMethod = (mElementInfo.IsGeneric ? typeof (ICollection<>).MakeGenericType(mElementInfo.RealType) : typeof(IList)).GetMethod("Add", BindingFlags.Public | BindingFlags.Instance);
-            return Expression.Call(collectionParam, addMethod, itemParam);
         }
 
         public IEnumerable<Expression> GetFieldsSerializeExpressions(Expression writerParam, Expression graphParam, Serializer serializer)
@@ -145,7 +135,7 @@ namespace CoolSerializer.V3
         }
     }
 
-    public class BoundCollectionFieldInfo : IVariableBoundFieldInfo
+    public class BoundCollectionFieldInfo : IBoundFieldInfo
     {
         public BoundCollectionFieldInfo(Type collectionType)
         {
@@ -165,9 +155,32 @@ namespace CoolSerializer.V3
             RawType = elementType.GetRawType();
         }
 
-        public Type RealType { get; private set; }
-        public FieldType RawType { get; private set; }
+        public Type RealType { get; protected set; }
+        public FieldType RawType { get; protected set; }
+        public virtual Expression GetGetExpression(Expression graphParam, params Expression[] indexerParameters)
+        {
+            throw new NotImplementedException("Collections are iterated via IEnumerable interface");
+        }
+
+        public virtual Expression GetSetExpression(Expression graphParam, Expression graphFieldValue, params Expression[] indexerParameters)
+        {
+            var addMethod = (IsGeneric ? typeof(ICollection<>).MakeGenericType(RealType) : typeof(IList)).GetMethod("Add", BindingFlags.Public | BindingFlags.Instance);
+            return Expression.Call(graphParam, addMethod, graphFieldValue);
+        }
+
         public bool IsGeneric { get; private set; }
+    }
+
+    public class BoundArrayFieldInfo : BoundCollectionFieldInfo
+    {
+        public BoundArrayFieldInfo(Type collectionType) : base(collectionType)
+        {
+        }
+
+        public override Expression GetSetExpression(Expression graphParam, Expression graphFieldValue, params Expression[] indexerParameters)
+        {
+            return Expression.Assign(Expression.ArrayAccess(graphParam, indexerParameters), graphFieldValue);
+        }
     }
 
 }

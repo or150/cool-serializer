@@ -142,7 +142,7 @@ namespace CoolSerializer.V3
         {
             var fieldDeserializeExprs = new List<Expression>();
 
-            foreach (var field in this.Fields.Cast<IConcreteBoundFieldInfo>())
+            foreach (var field in this.Fields)
             {
                 var castedDes = deserializer.GetRightDeserializeMethod(readerParam, field);
                 var assignment = field.GetSetExpression(graphParam, castedDes);
@@ -160,7 +160,7 @@ namespace CoolSerializer.V3
         {
             var fieldSerializeExprs = new List<Expression>();
 
-            foreach (var field in this.Fields.Cast<IConcreteBoundFieldInfo>())
+            foreach (var field in this.Fields)
             {
                 var fieldAccessExpression = field.GetGetExpression(graphParam);
                 var serializeExpression = serializer.GetRightSerializeMethod(writerParam, fieldAccessExpression, field);
@@ -176,21 +176,11 @@ namespace CoolSerializer.V3
         Type RealType { get; }
         FieldType RawType { get; }
         //FieldInfo FieldInfo { get; }
-
+        Expression GetGetExpression(Expression graphParam, params Expression[] indexerParameters);
+        Expression GetSetExpression(Expression graphParam, Expression graphFieldValue, params Expression[] indexerParameters);
     }
 
-    public interface IConcreteBoundFieldInfo : IBoundFieldInfo
-    {
-        Expression GetGetExpression(Expression graphParam);
-        Expression GetSetExpression(Expression graphParam, Expression graphFieldValue);
-    }
-
-    public interface IVariableBoundFieldInfo : IBoundFieldInfo
-    {
-        //Expression GetGetExpression(Expression graphParam, Expression iParam);
-        //Expression GetSetExpression(Expression graphParam, Expression graphFieldValue, Expression iParam);
-    }
-    public class BoundFieldInfo : IConcreteBoundFieldInfo
+    public class BoundFieldInfo : IBoundFieldInfo
     {
         private readonly PropertyInfo mInfo;
 
@@ -235,7 +225,7 @@ namespace CoolSerializer.V3
         public FieldType RawType { get { return FieldInfo.Type; } }
         public FieldInfo FieldInfo { get; private set; }
 
-        public Expression GetGetExpression(Expression graphParam)
+        public Expression GetGetExpression(Expression graphParam, params Expression[] indexerParameters)
         {
             if (mInfo == null)
             {
@@ -244,7 +234,7 @@ namespace CoolSerializer.V3
             return Expression.MakeMemberAccess(graphParam, mInfo);
         }
 
-        public Expression GetSetExpression(Expression graphParam, Expression graphFieldValue)
+        public Expression GetSetExpression(Expression graphParam, Expression graphFieldValue, params Expression[] indexerParameters)
         {
             if (mInfo == null)
             {
