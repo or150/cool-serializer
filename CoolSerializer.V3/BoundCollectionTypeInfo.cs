@@ -7,6 +7,26 @@ using System.Reflection;
 
 namespace CoolSerializer.V3
 {
+
+    class CollecionBoundTypeInfoProvider : IBoundTypeInfoProvider
+    {
+        public bool TryProvide(TypeInfo info, out IBoundTypeInfo boundTypeInfo)
+        {
+            boundTypeInfo = null;
+            if (info.RawType != FieldType.Collection)
+            {
+                return false;
+            }
+            var realType = Type.GetType(info.Name);
+            if (realType == null)
+            {
+                return false;
+            }
+            boundTypeInfo = new BoundCollectionTypeInfo(info, realType);
+            return true;
+        }
+    }
+
     public class BoundCollectionTypeInfo : IBoundTypeInfo
     {
         private readonly BoundCollectionFieldInfo mElementInfo;
@@ -129,21 +149,15 @@ namespace CoolSerializer.V3
     {
         public BoundCollectionFieldInfo(Type collectionType)
         {
-            var collectionInterface = collectionType.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>));
-
-            Type elementType = null;
-            if (collectionInterface == null)
+            Type elementType = collectionType.GetElementTypeEx();
+            if (elementType == null)
             {
-                if (collectionType.GetInterfaces().All(i => i != typeof(IList)))
-                {
-                    throw new NotSupportedException();
-                }
                 elementType = typeof(object);
                 IsGeneric = false;
             }
             else
             {
-                elementType = collectionInterface.GetGenericArguments()[0];
+                elementType = elementType;
                 IsGeneric = true;
             }
 
@@ -153,7 +167,6 @@ namespace CoolSerializer.V3
 
         public Type RealType { get; private set; }
         public FieldType RawType { get; private set; }
-        public FieldInfo FieldInfo { get; private set; }
         public bool IsGeneric { get; private set; }
     }
 

@@ -48,6 +48,16 @@ namespace CoolSerializer.V3
         {
             return string.Format("{0} {1}", Type.ToString(), Name.ToString());
         }
+    } 
+
+    public class CollectionFieldInfo : FieldInfo
+    {
+        public FieldType ElementType { get; set; }
+
+        public CollectionFieldInfo(FieldType elementType, string name) : base(FieldType.Collection, name)
+        {
+            ElementType = elementType;
+        }
     }
 
 

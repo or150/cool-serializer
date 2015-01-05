@@ -87,7 +87,7 @@ namespace CoolSerializer.V3
         private void SerializeComplex<T>(IDocumentWriter writer, T graph)
         {
             var info = mProvider.Provide(graph);
-            if (info.RawType != FieldType.Object && info.RawType != FieldType.Collection)
+            if (!info.RawType.IsComplex())
             {
                 Box(writer, graph, info.RawType);
                 return;
@@ -145,7 +145,7 @@ namespace CoolSerializer.V3
         public Expression GetRightSerializeMethod(Expression writerParam, Expression fieldExpression, IBoundFieldInfo fieldType)
         {
             var rawType = fieldType.RawType;
-            if (rawType == FieldType.Object || rawType == FieldType.Collection)
+            if (rawType.IsComplex())
             {
                 var serializeField = Expression.Call
                    (Expression.Constant(this),

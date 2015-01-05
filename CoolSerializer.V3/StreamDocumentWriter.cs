@@ -111,6 +111,10 @@ namespace CoolSerializer.V3
                 {
                     mBinaryWriter.Write((byte) fieldInfo.Type);
                     mBinaryWriter.Write(fieldInfo.Name);
+                    if (fieldInfo.Type == FieldType.Collection)
+                    {
+                        mBinaryWriter.Write((byte)((CollectionFieldInfo)fieldInfo).ElementType);
+                    }
                 }
             }
             else

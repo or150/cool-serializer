@@ -11,34 +11,39 @@ namespace CoolSerializer.V3
     {
         static void Main(string[] args)
         {
-            var graph = new Graph()
-            {
-                //Arr = new[] { 1, 3, 4, 5 },
-                //Coll = new ArrayList() { 4, 5, 6, 7, null,9 },
-                S = new InnerStruct
-                {
-                    I = 5,
-                    L = 1
-                },
-                Z = new InnerGraphDerived()
-                {
-                    H = 6,
-                    Prop = "asd",
-                    Surprise = null,
-                    MyInt = 29
-                }
-            };
-            //var graph = new Dictionary<int, object>
+            //var graph = new Graph()
             //{
-            //    {6,"6"},
-            //    {12,"SAD"},
-            //    {4, "but"},
-            //    {5, "true"},
-            //    {9, new MyBadClass(67, "89")}
+            //    //Arr = new[] { 1, 3, 4, 5 },
+            //    //Coll = new ArrayList() { 4, 5, 6, 7, null,9 },
+            //    S = new InnerStruct
+            //    {
+            //        I = 5,
+            //        L = 1
+            //    },
+            //    Z = new InnerGraphDerived()
+            //    {
+            //        H = 6,
+            //        Prop = "asd",
+            //        Surprise = null,
+            //        MyInt = 29
+            //    }
             //};
-            //((MyBadClass)graph[9]).InitBadClass((MyBadClass)graph[9]);
+
+            //((InnerGraphDerived)graph.Z).Surprise = graph;
+
+
+            var graph = new Dictionary<int, object>
+            {
+                {6,"6"},
+                {12,"SAD"},
+                {4, "but"},
+                {5, "true"},
+                {9, new MyBadClass(67, "89")}
+            };
+            ((MyBadClass)graph[9]).InitBadClass((MyBadClass)graph[9]);
+
+
             //var graph = new Graph() {Z = new InnerGraph() {H = 9}};
-            //((InnerGraphDerived)graph2.Z).Surprise = graph2;
             //((ArrayList) graph2.Coll).Add(graph2);
             //var graph = new List<Graph>() {null, graph2, null, (Graph)graph2};
             //((ArrayList)graph2.Coll).Add(graph);
@@ -66,11 +71,20 @@ namespace CoolSerializer.V3
             //}).ToList();
 
             var ser = new Serializer();
+            using (var sWrite = File.Open(@"..\asd.txt", FileMode.Create))
+            {
+                ser.Serialize(sWrite, graph);
+                sWrite.Position = 0;
+            }
+
             var deserializer = new Deserializer();
             var s = new MemoryStream();
-            ser.Serialize(s, graph);
-            s.Position = 0;
-            deserializer.Deserialize(s);
+            using (var sRead = File.Open(@"..\asd.txt", FileMode.Open))
+            {
+                sRead.CopyTo(s);
+                s.Position = 0;
+            }
+            var myObj = deserializer.Deserialize(s);
 
             var count = 1000 * 1000;
 

@@ -120,7 +120,7 @@ namespace CoolSerializer.V3
 
         public Expression GetRightDeserializeMethod(Expression readerParam, IBoundFieldInfo fieldType)
         {
-            if (fieldType.RawType == FieldType.Object || fieldType.RawType == FieldType.Collection)
+            if (fieldType.RawType.IsComplex())
             {
                 var deserializeField = Expression.Call
                     (Expression.Constant(this),
@@ -129,13 +129,7 @@ namespace CoolSerializer.V3
                         readerParam);
                 return deserializeField;
             }
-            //else if (fieldType.FieldInfo.Type == FieldType.ObjectByVal)
-            //{
-            //    var fieldInfo = ((IByValBoundFieldInfo)fieldType).TypeInfo;
-            //    var retValParam = Expression.Variable(fieldInfo.RealType, "retField");
-            //    var creation = Expression.New(fieldInfo.RealType);
-            //    return Expression.Block(new []{retValParam},new[]{creation}.Concat(GetDeserializeExpressions(fieldInfo, readerParam, retValParam)).Concat(new[]{retValParam}));
-            //}
+
             var deserializeMethod = typeof (IDocumentReader).GetMethods
                 (BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
                 .First(m => m.ReturnType == fieldType.RealType);

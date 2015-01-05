@@ -90,7 +90,7 @@ namespace CoolSerializer.V3
         {
             var rawType = t.GetRawType();
             FieldInfo[] fields = null;
-            if (t.GetRawType() == FieldType.Collection)
+            if (rawType == FieldType.Collection)
             {
                 fields = new FieldInfo[0];
             }
@@ -111,6 +111,11 @@ namespace CoolSerializer.V3
         private FieldInfo CreateFieldInfo(PropertyInfo p)
         {
             var rawType = p.PropertyType.GetRawType();
+            if (rawType == FieldType.Collection)
+            {
+                var elementType = p.PropertyType.GetElementTypeEx();
+                return new CollectionFieldInfo(elementType.GetRawType(),p.Name);
+            }
             return new FieldInfo(rawType, p.Name);
         }
     }

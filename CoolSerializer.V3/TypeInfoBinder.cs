@@ -8,41 +8,28 @@ namespace CoolSerializer.V3
 {
     public class TypeInfoBinder
     {
-        private readonly ISimplifersProvider mSimplifersProvider;
-
+        private readonly List<IBoundTypeInfoProvider> mProviders;
         public TypeInfoBinder(ISimplifersProvider simplifersProvider)
         {
-            mSimplifersProvider = simplifersProvider;
+            mProviders = new List<IBoundTypeInfoProvider>
+            {
+                new CollecionBoundTypeInfoProvider(),
+                new SimplifiedBoundTypeInfoProvider(simplifersProvider),
+                new BasicBoundTypeInfoProvider()
+            };
         }
         public IBoundTypeInfo Provide(TypeInfo info)
         {
-            var realType = Type.GetType(info.Name);
-            if (realType == null)
+            IBoundTypeInfo boundInfo;
+            foreach (var provider in mProviders)
             {
-                throw new NotImplementedException("Unk types are not implemented atm");
-            }
-            if (info.RawType == FieldType.Collection)
-            {
-                return new BoundCollectionTypeInfo(info, realType);
-            }
-
-            object simplifer;
-            if (mSimplifersProvider.TryProvide(realType, out simplifer))
-            {
-                return new SimplifiedBoundTypeInfo(info,simplifer);
+                if (provider.TryProvide(info, out boundInfo))
+                {
+                    return boundInfo;
+                }
             }
 
-            var fields = new IBoundFieldInfo[info.Fields.Length];
-            for (int i = 0; i < fields.Length; i++)
-            {
-                fields[i] = CreateBoundFieldInfo(realType, info.Fields[i]);
-            }
-            return new BoundTypeInfo(info, realType, fields);
-        }
-
-        private IBoundFieldInfo CreateBoundFieldInfo(Type objectType, FieldInfo fieldInfo)
-        {
-            return new BoundFieldInfo(objectType, fieldInfo);
+            throw new NotImplementedException("Unk types are not implemented atm");
         }
     }
 
@@ -52,6 +39,61 @@ namespace CoolSerializer.V3
         TypeInfo TypeInfo { get; }
         Expression GetSerializeExpression(Expression graphParam, Expression writerParam, Serializer serializer);
         Expression GetDeserializeExpression(Expression readerParam, Deserializer deserializer);
+    }
+
+    public interface IBoundTypeInfoProvider
+    {
+        bool TryProvide(TypeInfo info, out IBoundTypeInfo boundTypeInfo);
+    }
+
+    class BasicBoundTypeInfoProvider : IBoundTypeInfoProvider
+    {
+        public bool TryProvide(TypeInfo info, out IBoundTypeInfo boundTypeInfo)
+        {
+            var realType = Type.GetType(info.Name);
+            if (realType == null)
+            {
+                boundTypeInfo = null;
+                return false;
+            }
+            var fields = new IBoundFieldInfo[info.Fields.Length];
+            for (int i = 0; i < fields.Length; i++)
+            {
+                fields[i] = CreateBoundFieldInfo(realType, info.Fields[i]);
+            }
+            boundTypeInfo = new BoundTypeInfo(info, realType, fields);
+            return true;
+        }
+
+        private IBoundFieldInfo CreateBoundFieldInfo(Type objectType, FieldInfo fieldInfo)
+        {
+            return new BoundFieldInfo(objectType, fieldInfo);
+        }
+    }
+
+    class SimplifiedBoundTypeInfoProvider : IBoundTypeInfoProvider
+    {
+        private readonly ISimplifersProvider mSimplifiersProvider;
+
+        public SimplifiedBoundTypeInfoProvider(ISimplifersProvider simplifiersProvider)
+        {
+            mSimplifiersProvider = simplifiersProvider;
+        }
+
+        public bool TryProvide(TypeInfo info, out IBoundTypeInfo boundTypeInfo)
+        {
+            object simplifer;
+            var realType = Type.GetType(info.Name);
+            
+            
+            if (realType != null && mSimplifiersProvider.TryProvide(realType, out simplifer))
+            {
+                boundTypeInfo = new SimplifiedBoundTypeInfo(info, simplifer);
+                return true;
+            }
+            boundTypeInfo = null;
+            return false;
+        }
     }
 
     public class BoundTypeInfo : IBoundTypeInfo
@@ -157,10 +199,35 @@ namespace CoolSerializer.V3
             mInfo = objectType.GetProperty(fieldInfo.Name);
             if (mInfo == null)
             {
-                throw new NotImplementedException();
+                if (fieldInfo.Type.IsComplex())
+                {
+                    RealType = typeof (object); //TODO: make it better
+                }
+                else
+                {
+                    RealType = Type.GetType("System." + fieldInfo.Type.ToString("G"));
+                    if (RealType == null)
+                    {
+                        throw new Exception("WTF?");
+                    }
+                }
+                //if (fieldInfo.Type == FieldType.Collection)
+                //{
+                //    RealType = typeof(ICollection<>).MakeGenericType(Type.GetType("System." + ((CollectionFieldInfo)fieldInfo).ElementType.ToString("G")));
+                //}
+                //else
+                //{
+                //    RealType = Type.GetType("System." + fieldInfo.Type.ToString("G"));
+                //    if (RealType == null)
+                //    {
+                //        throw new Exception("WTF?");
+                //    }
+                //}
             }
-
-            RealType = mInfo.PropertyType;
+            else
+            {
+                RealType = mInfo.PropertyType;
+            }
             FieldInfo = fieldInfo;
         }
 
@@ -170,11 +237,19 @@ namespace CoolSerializer.V3
 
         public Expression GetGetExpression(Expression graphParam)
         {
+            if (mInfo == null)
+            {
+                throw new NotSupportedException();
+            }
             return Expression.MakeMemberAccess(graphParam, mInfo);
         }
 
         public Expression GetSetExpression(Expression graphParam, Expression graphFieldValue)
         {
+            if (mInfo == null)
+            {
+                return graphFieldValue;
+            }
             return Expression.Assign(Expression.MakeMemberAccess(graphParam, mInfo), graphFieldValue);
         }
     }

@@ -66,5 +66,26 @@ namespace CoolSerializer.V3
                     throw new NotImplementedException();
             }
         }
+
+        internal static Type GetElementTypeEx(this Type collectionType)
+        {
+            var collectionInterface =
+                collectionType.GetInterfaces()
+                    .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>));
+            if (collectionInterface == null)
+            {
+                if (collectionType.GetInterfaces().All(i => i != typeof(IList)))
+                {
+                    throw new NotSupportedException();
+                }
+                return null;
+            }
+            return collectionInterface.GetGenericArguments()[0];
+        }
+
+        internal static bool IsComplex(this FieldType type)
+        {
+            return type == FieldType.Collection || type == FieldType.Object;
+        }
     }
 }
