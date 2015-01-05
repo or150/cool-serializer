@@ -10,10 +10,12 @@ namespace CoolSerializer.V3
     class SimplifiedBoundTypeInfoProvider : IBoundTypeInfoProvider
     {
         private readonly ISimplifersProvider mSimplifiersProvider;
+        private readonly IBoundFieldInfoProvider mFieldsProvider;
 
-        public SimplifiedBoundTypeInfoProvider(ISimplifersProvider simplifiersProvider)
+        public SimplifiedBoundTypeInfoProvider(ISimplifersProvider simplifiersProvider, IBoundFieldInfoProvider fieldsProvider)
         {
             mSimplifiersProvider = simplifiersProvider;
+            mFieldsProvider = fieldsProvider;
         }
 
         public bool TryProvide(TypeInfo info, out IBoundTypeInfo boundTypeInfo)
@@ -31,14 +33,10 @@ namespace CoolSerializer.V3
             return false;
         }
 
-        private static IBoundFieldInfo[] GetFields(TypeInfo typeInfo, Type simplifierType)
+        private IBoundFieldInfo[] GetFields(TypeInfo typeInfo, Type simplifierType)
         {
             var type = SimplifiersHelper.GetSimplifiedType(simplifierType);
-            var fields = new IBoundFieldInfo[typeInfo.Fields.Length];
-            for (int i = 0; i < fields.Length; i++)
-            {
-                fields[i] = new BoundFieldInfo(type,typeInfo.Fields[i]);
-            }
+            var fields = mFieldsProvider.Provide(typeInfo, type);
             return fields;
         }
 

@@ -42,7 +42,7 @@ namespace CoolSerializer.V3
             mProviders = new List<IBoundTypeInfoProvider>
             {
                 new CollecionBoundTypeInfoProvider(),
-                new SimplifiedBoundTypeInfoProvider(simplifersProvider),
+                new SimplifiedBoundTypeInfoProvider(simplifersProvider,fieldsProvider),
                 new BasicBoundTypeInfoProvider(fieldsProvider)
             };
         }
