@@ -10,16 +10,40 @@ namespace CoolSerializer.V3
         IBoundTypeInfo Provide(TypeInfo info);
     }
 
+    public interface IBoundFieldInfoProvider
+    {
+        IBoundFieldInfo[] Provide(TypeInfo info, Type realType);
+    }
+
+    class BoundFieldInfoProvider : IBoundFieldInfoProvider
+    {
+        public IBoundFieldInfo[] Provide(TypeInfo info, Type realType)
+        {
+            var fields = new IBoundFieldInfo[info.Fields.Length];
+            for (int i = 0; i < fields.Length; i++)
+            {
+                fields[i] = CreateBoundFieldInfo(realType, info.Fields[i]);
+            }
+            return fields;
+        }
+
+        private IBoundFieldInfo CreateBoundFieldInfo(Type objectType, FieldInfo fieldInfo)
+        {
+            return new BoundFieldInfo(objectType, fieldInfo);
+        }
+    }
+
     public class TypeInfoBinder : IBoundTypeInfoFactory
     {
         private readonly List<IBoundTypeInfoProvider> mProviders;
         public TypeInfoBinder(ISimplifersProvider simplifersProvider)
         {
+            var fieldsProvider = new BoundFieldInfoProvider();
             mProviders = new List<IBoundTypeInfoProvider>
             {
                 new CollecionBoundTypeInfoProvider(),
                 new SimplifiedBoundTypeInfoProvider(simplifersProvider),
-                new BasicBoundTypeInfoProvider()
+                new BasicBoundTypeInfoProvider(fieldsProvider)
             };
         }
         public IBoundTypeInfo Provide(TypeInfo info)

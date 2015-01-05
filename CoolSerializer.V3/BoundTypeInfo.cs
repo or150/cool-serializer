@@ -8,6 +8,13 @@ namespace CoolSerializer.V3
 {
     class BasicBoundTypeInfoProvider : IBoundTypeInfoProvider
     {
+        private readonly IBoundFieldInfoProvider mFieldsProvider;
+
+        public BasicBoundTypeInfoProvider(IBoundFieldInfoProvider fieldsProvider)
+        {
+            mFieldsProvider = fieldsProvider;
+        }
+
         public bool TryProvide(TypeInfo info, out IBoundTypeInfo boundTypeInfo)
         {
             var realType = Type.GetType(info.Name);
@@ -16,18 +23,10 @@ namespace CoolSerializer.V3
                 boundTypeInfo = null;
                 return false;
             }
-            var fields = new IBoundFieldInfo[info.Fields.Length];
-            for (int i = 0; i < fields.Length; i++)
-            {
-                fields[i] = CreateBoundFieldInfo(realType, info.Fields[i]);
-            }
+
+            var fields = mFieldsProvider.Provide(info,realType);
             boundTypeInfo = new BoundTypeInfo(info, realType, fields);
             return true;
-        }
-
-        private IBoundFieldInfo CreateBoundFieldInfo(Type objectType, FieldInfo fieldInfo)
-        {
-            return new BoundFieldInfo(objectType, fieldInfo);
         }
     }
     public class BoundTypeInfo : IBoundTypeInfo

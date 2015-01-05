@@ -15,6 +15,16 @@ namespace CoolSerializer.V3
     public class ExtraData
     {
         public TypeInfo TypeInfo { get; set; }
+        public List<ExtraField> ExtraFields { get; set; }
+    }
+
+    public abstract class ExtraField
+    {
+    }
+
+    public class ExtraField<T> : ExtraField
+    {
+        T FieldValue { get; set; }
     }
 
     public class TypeInfoProvider
@@ -105,7 +115,18 @@ namespace CoolSerializer.V3
         {
             return type
                 .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Select(CreateFieldInfo).ToArray();
+                .Where(FieldIsNotExtraData).Select(CreateFieldInfo).ToArray();
+        }
+
+        private bool FieldIsNotExtraData(PropertyInfo arg)
+        {
+            var type = arg.DeclaringType;
+            var extraDataType = typeof (IExtraDataHolder);
+            if (!extraDataType.IsAssignableFrom(type))
+            {
+                return true;
+            }
+            return !type.GetInterfaceMap(extraDataType).TargetMethods.Contains(arg.GetGetMethod(true));
         }
 
         private FieldInfo CreateFieldInfo(PropertyInfo p)

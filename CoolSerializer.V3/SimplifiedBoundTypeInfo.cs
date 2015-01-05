@@ -18,33 +18,22 @@ namespace CoolSerializer.V3
 
         public bool TryProvide(TypeInfo info, out IBoundTypeInfo boundTypeInfo)
         {
-            object simplifer;
+            object simplifier;
             var realType = Type.GetType(info.Name);
 
 
-            if (realType != null && mSimplifiersProvider.TryProvide(realType, out simplifer))
+            if (realType != null && mSimplifiersProvider.TryProvide(realType, out simplifier))
             {
-                boundTypeInfo = new SimplifiedBoundTypeInfo(info, simplifer);
+                boundTypeInfo = new SimplifiedBoundTypeInfo(info, simplifier, GetFields(info, simplifier.GetType()));
                 return true;
             }
             boundTypeInfo = null;
             return false;
         }
-    }
-
-    public class SimplifiedBoundTypeInfo : BoundTypeInfo
-    {
-        private readonly object mSimplifier;
-
-        public SimplifiedBoundTypeInfo(TypeInfo typeInfo, object simplifier)
-            : base(typeInfo, GetRealType(simplifier.GetType()), GetFields(typeInfo, simplifier.GetType()))
-        {
-            mSimplifier = simplifier;
-        }
 
         private static IBoundFieldInfo[] GetFields(TypeInfo typeInfo, Type simplifierType)
         {
-            var type = GetSimplifiedType(simplifierType);
+            var type = SimplifiersHelper.GetSimplifiedType(simplifierType);
             var fields = new IBoundFieldInfo[typeInfo.Fields.Length];
             for (int i = 0; i < fields.Length; i++)
             {
@@ -53,26 +42,22 @@ namespace CoolSerializer.V3
             return fields;
         }
 
-        private static Type GetRealType(Type simplifierType)
-        {
-            return GetSimplifierType(simplifierType).GetGenericArguments()[0];
-        }
-        private static Type GetSimplifiedType(Type simplifierType)
-        {
-            return GetSimplifierType(simplifierType).GetGenericArguments()[1];
-        }
+    }
 
-        private static Type GetSimplifierType(Type simplifierType)
-        {
-            return simplifierType.GetInterfaces()
-                .First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof (ISimpifier<,>));
-        }
+    public class SimplifiedBoundTypeInfo : BoundTypeInfo
+    {
+        private readonly object mSimplifier;
 
+        public SimplifiedBoundTypeInfo(TypeInfo typeInfo, object simplifier, IBoundFieldInfo[] fields)
+            : base(typeInfo, SimplifiersHelper.GetRealType(simplifier.GetType()), fields)
+        {
+            mSimplifier = simplifier;
+        }
         protected override Expression GetFieldsSerializeExpressions(Expression writerParam, Expression graphParam, Serializer serializer)
         {
-            var simplfiyMethod = GetSimplifierType(mSimplifier.GetType()).GetMethod("Simplify");
+            var simplfiyMethod = SimplifiersHelper.GetSimplifierType(mSimplifier.GetType()).GetMethod("Simplify");
             var simplify = Expression.Call(Expression.Constant(mSimplifier), simplfiyMethod, graphParam);
-            var simplifiedParam = Expression.Parameter(GetSimplifiedType(mSimplifier.GetType()), "simplifiedGraph");
+            var simplifiedParam = Expression.Parameter(SimplifiersHelper.GetSimplifiedType(mSimplifier.GetType()), "simplifiedGraph");
             var assSimplified = Expression.Assign(simplifiedParam, simplify);
             var serializeSimplified = base.GetFieldsSerializeExpressions(writerParam, simplifiedParam, serializer);
             return Expression.Block(new[] {simplifiedParam}, assSimplified, serializeSimplified);
@@ -80,9 +65,9 @@ namespace CoolSerializer.V3
 
         protected override Expression GetFieldsDeserializeExpressions(Expression readerParam, Expression graphParam, Deserializer deserializer)
         {
-            var simplifiedType = GetSimplifiedType(mSimplifier.GetType());
+            var simplifiedType = SimplifiersHelper.GetSimplifiedType(mSimplifier.GetType());
             
-            var desimpliyMethod = GetSimplifierType(mSimplifier.GetType()).GetMethod("Desimplify");
+            var desimpliyMethod = SimplifiersHelper.GetSimplifierType(mSimplifier.GetType()).GetMethod("Desimplify");
             
             var simplifiedParam = Expression.Parameter(simplifiedType, "simplifiedGraph");
             var simplifiedParamInit = Expression.Assign(simplifiedParam, Expression.New(simplifiedType));
@@ -134,6 +119,25 @@ namespace CoolSerializer.V3
                 expressions.Add(expr);
             }
             return Expression.Block(new []{tempParam}, expressions);
+        }
+    }
+
+    internal class SimplifiersHelper
+    {
+        internal static Type GetRealType(Type simplifierType)
+        {
+            return GetSimplifierType(simplifierType).GetGenericArguments()[0];
+        }
+
+        internal static Type GetSimplifiedType(Type simplifierType)
+        {
+            return GetSimplifierType(simplifierType).GetGenericArguments()[1];
+        }
+
+        internal static Type GetSimplifierType(Type simplifierType)
+        {
+            return simplifierType.GetInterfaces()
+                .First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ISimpifier<,>));
         }
     }
 }

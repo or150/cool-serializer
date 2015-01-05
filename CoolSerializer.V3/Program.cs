@@ -26,7 +26,7 @@ namespace CoolSerializer.V3
                     Prop = "asd",
                     Surprise = null,
                     MyInt = 29
-                }
+                },
             };
 
             ((InnerGraphDerived)graph.Z).Surprise = graph;
@@ -135,7 +135,7 @@ namespace CoolSerializer.V3
         }
     }
 
-    public class Graph
+    public class Graph : IExtraDataHolder
     {
         public int[] Arr { get; set; }
         public ICollection Coll { get; set; }
@@ -143,6 +143,7 @@ namespace CoolSerializer.V3
         public int Y { get; set; }
         public InnerGraph Z { get; set; }
         public InnerStruct S { get; set; }
+        public ExtraData ExtraData { get; set; }
     }
 
     public struct InnerStruct
