@@ -19,17 +19,28 @@ namespace CoolSerializer.V3
     {
         public IBoundFieldInfo[] Provide(TypeInfo info, Type realType)
         {
+            int nonExistingCount = 0;
             var fields = new IBoundFieldInfo[info.Fields.Length];
             for (int i = 0; i < fields.Length; i++)
             {
-                fields[i] = CreateBoundFieldInfo(realType, info.Fields[i]);
+                fields[i] = CreateBoundFieldInfo(realType, info.Fields[i], ref nonExistingCount);
             }
             return fields;
         }
 
-        private IBoundFieldInfo CreateBoundFieldInfo(Type objectType, FieldInfo fieldInfo)
+        private IBoundFieldInfo CreateBoundFieldInfo(Type objectType, FieldInfo fieldInfo, ref int nonExistingCount)
         {
-            return new BoundFieldInfo(objectType, fieldInfo);
+            var isExtraDataHolder = objectType.IsExtraDataHolder();
+            var propertyInfo = objectType.GetProperty(fieldInfo.Name);
+            if (propertyInfo == null)
+            {
+                var boundInfo = isExtraDataHolder
+                    ? new ExtraDataBoundFieldInfo(fieldInfo, nonExistingCount)
+                    : new EmptyBoundFieldInfo(fieldInfo);
+                nonExistingCount++;
+                return boundInfo;
+            }
+            return new BoundFieldInfo(objectType, fieldInfo, propertyInfo);
         }
     }
 
@@ -65,7 +76,7 @@ namespace CoolSerializer.V3
         Type RealType { get; }
         TypeInfo TypeInfo { get; }
         Expression GetSerializeExpression(Expression graphParam, Expression writerParam, Serializer serializer);
-        Expression GetDeserializeExpression(Expression readerParam, Deserializer deserializer);
+        Expression GetDeserializeExpression(Expression readerParam, TypeInfo info, Deserializer deserializer);
     }
     public interface IBoundFieldInfo
     {

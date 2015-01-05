@@ -13,8 +13,8 @@ namespace CoolSerializer.V3
         {
             var graph = new Graph()
             {
-                Arr = new[] { 1, 3, 4, 5 },
-                Coll = new ArrayList() { 4, 5, 6, 7, null, 9 },
+                //Arr = new[] { 1, 3, 4, 5 },
+                //Coll = new ArrayList() { 4, 5, 6, 7, null, 9 },
                 S = new InnerStruct
                 {
                     I = 5,
@@ -70,12 +70,12 @@ namespace CoolSerializer.V3
             //    return x;
             //}).ToList();
 
-            var ser = new Serializer();
-            using (var sWrite = File.Open(@"..\asd.txt", FileMode.Create))
-            {
-                ser.Serialize(sWrite, graph);
-                sWrite.Position = 0;
-            }
+            //var ser = new Serializer();
+            //using (var sWrite = File.Open(@"..\asd.txt", FileMode.Create))
+            //{
+            //    ser.Serialize(sWrite, graph);
+            //    sWrite.Position = 0;
+            //}
 
             var deserializer = new Deserializer();
             var s = new MemoryStream();
@@ -137,8 +137,8 @@ namespace CoolSerializer.V3
 
     public class Graph : IExtraDataHolder
     {
-        public int[] Arr { get; set; }
-        public ICollection Coll { get; set; }
+        //public int[] Arr { get; set; }
+        //public ICollection Coll { get; set; }
         public int X { get; set; }
         public int Y { get; set; }
         public InnerGraph Z { get; set; }

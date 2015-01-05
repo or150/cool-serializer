@@ -87,5 +87,10 @@ namespace CoolSerializer.V3
         {
             return type == FieldType.Collection || type == FieldType.Object;
         }
+
+        internal static bool IsExtraDataHolder(this Type type)
+        {
+            return typeof (IExtraDataHolder).IsAssignableFrom(type);
+        }
     }
 }

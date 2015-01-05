@@ -24,7 +24,7 @@ namespace CoolSerializer.V3
                 return false;
             }
 
-            var fields = mFieldsProvider.Provide(info,realType);
+            var fields = mFieldsProvider.Provide(info, realType);
             boundTypeInfo = new BoundTypeInfo(info, realType, fields);
             return true;
         }
@@ -54,21 +54,34 @@ namespace CoolSerializer.V3
             var fieldSerializeExprs = this.GetFieldsSerializeExpressions(writerParam, castedGraph, serializer);
 
             var block = Expression.Block(new[] { castedGraph },
-                new Expression[] { castExpression, writeHeaderExpr, writeTypeInfoExpr }.Concat(new []{fieldSerializeExprs}));
+                new Expression[] { castExpression, writeHeaderExpr, writeTypeInfoExpr }.Concat(new[] { fieldSerializeExprs }));
             return block;
         }
 
-        public Expression GetDeserializeExpression(Expression readerParam, Deserializer deserializer)
+        public Expression GetDeserializeExpression(Expression readerParam, TypeInfo info, Deserializer deserializer)
         {
             var retValParam = Expression.Variable(this.RealType, "retVal");
             var creation = this.GetCreateExpression();
             var retValAssignment = Expression.Assign(retValParam, creation);
+            Expression extraDataAssignment = Expression.Empty();
+            if (RealType.IsExtraDataHolder())
+            {
+                extraDataAssignment = CreateExtraDataInitializationExpression(retValParam, info);
+            }
             var addToVisitedObjects = deserializer.GetAddToVisitedObjectsExpr(this, retValParam);
             var fieldDeserializeExprs = this.GetFieldsDeserializeExpressions(readerParam, retValParam, deserializer);
 
             var block = Expression.Block(new[] { retValParam },
-                new[] { retValAssignment, addToVisitedObjects }.Concat(new []{fieldDeserializeExprs}).Concat(new[] { retValParam }));
+                new[] { retValAssignment, extraDataAssignment, addToVisitedObjects }.Concat(new[] { fieldDeserializeExprs }).Concat(new[] { retValParam }));
             return block;
+        }
+
+        private Expression CreateExtraDataInitializationExpression(ParameterExpression graphParam, TypeInfo info)
+        {
+            var extraData = typeof(IExtraDataHolder).GetProperty("ExtraData");
+            var extraDataCtor = typeof(ExtraData).GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(TypeInfo) }, null);
+            var createExtraData = Expression.New(extraDataCtor, Expression.Constant(info));
+            return Expression.Assign(Expression.MakeMemberAccess(graphParam, extraData), createExtraData);
         }
 
         protected virtual Expression GetFieldsDeserializeExpressions(Expression readerParam, Expression graphParam, Deserializer deserializer)
@@ -103,44 +116,96 @@ namespace CoolSerializer.V3
         }
 
     }
+
+
+    public class EmptyBoundFieldInfo : IBoundFieldInfo
+    {
+        public EmptyBoundFieldInfo(FieldInfo fieldInfo)
+        {
+            if (fieldInfo.Type.IsComplex())
+            {
+                RealType = typeof(object); //TODO: make it better
+            }
+            else
+            {
+                RealType = Type.GetType("System." + fieldInfo.Type.ToString("G"));
+                if (RealType == null)
+                {
+                    throw new Exception("WTF?");
+                }
+            }
+
+            FieldInfo = fieldInfo;
+
+            //if (fieldInfo.Type == FieldType.Collection)
+            //{
+            //    RealType = typeof(ICollection<>).MakeGenericType(Type.GetType("System." + ((CollectionFieldInfo)fieldInfo).ElementType.ToString("G")));
+            //}
+            //else
+            //{
+            //    RealType = Type.GetType("System." + fieldInfo.Type.ToString("G"));
+            //    if (RealType == null)
+            //    {
+            //        throw new Exception("WTF?");
+            //    }
+            //}
+        }
+
+        public FieldInfo FieldInfo { get; set; }
+
+        public Type RealType { get; private set; }
+        public FieldType RawType { get { return FieldInfo.Type; } }
+        public virtual Expression GetGetExpression(Expression graphParam, params Expression[] indexerParameters)
+        {
+            throw new NotSupportedException();
+        }
+
+        public virtual Expression GetSetExpression(Expression graphParam, Expression graphFieldValue, params Expression[] indexerParameters)
+        {
+            return graphFieldValue;
+        }
+    }
+
+    public class ExtraDataBoundFieldInfo : EmptyBoundFieldInfo
+    {
+        private readonly int mExtraItemNumber;
+
+        public ExtraDataBoundFieldInfo(FieldInfo fieldInfo, int extraItemNumber)
+            : base(fieldInfo)
+        {
+            mExtraItemNumber = extraItemNumber;
+        }
+
+        public override Expression GetGetExpression(Expression graphParam, params Expression[] indexerParameters)
+        {
+            return base.GetGetExpression(graphParam, indexerParameters);
+        }
+
+        public override Expression GetSetExpression(Expression graphParam, Expression graphFieldValue, params Expression[] indexerParameters)
+        {
+            //TODO: check for nulls!
+            var extraFieldType = typeof(ExtraField<>).MakeGenericType(RealType);
+            var extraFieldValueProp = extraFieldType.GetProperty("FieldValue", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            var extraDataProp = typeof(IExtraDataHolder).GetProperty("ExtraData", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            var extraFieldsProp = typeof(ExtraData).GetProperty("ExtraFields", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            var extraData = Expression.MakeMemberAccess(Expression.MakeMemberAccess(graphParam, extraDataProp), extraFieldsProp);
+
+            var tempParam = Expression.Parameter(extraFieldType, "temp");
+            var extraFieldCreation = Expression.Assign(tempParam, Expression.New(extraFieldType));
+            var assignValue = Expression.Assign(Expression.MakeMemberAccess(tempParam, extraFieldValueProp), graphFieldValue);
+            var addToCollection = Expression.Call(extraData, "Add", null, tempParam);
+            return Expression.Block(new[] {tempParam}, extraFieldCreation, assignValue, addToCollection);
+            return null;
+        }
+    }
     public class BoundFieldInfo : IBoundFieldInfo
     {
         private readonly PropertyInfo mInfo;
 
-        public BoundFieldInfo(Type objectType, FieldInfo fieldInfo)
+        public BoundFieldInfo(Type objectType, FieldInfo fieldInfo, PropertyInfo propertyInfo)
         {
-            mInfo = objectType.GetProperty(fieldInfo.Name);
-            if (mInfo == null)
-            {
-                if (fieldInfo.Type.IsComplex())
-                {
-                    RealType = typeof(object); //TODO: make it better
-                }
-                else
-                {
-                    RealType = Type.GetType("System." + fieldInfo.Type.ToString("G"));
-                    if (RealType == null)
-                    {
-                        throw new Exception("WTF?");
-                    }
-                }
-                //if (fieldInfo.Type == FieldType.Collection)
-                //{
-                //    RealType = typeof(ICollection<>).MakeGenericType(Type.GetType("System." + ((CollectionFieldInfo)fieldInfo).ElementType.ToString("G")));
-                //}
-                //else
-                //{
-                //    RealType = Type.GetType("System." + fieldInfo.Type.ToString("G"));
-                //    if (RealType == null)
-                //    {
-                //        throw new Exception("WTF?");
-                //    }
-                //}
-            }
-            else
-            {
-                RealType = mInfo.PropertyType;
-            }
+            mInfo = propertyInfo;
+            RealType = mInfo.PropertyType;
             FieldInfo = fieldInfo;
         }
 
@@ -150,19 +215,11 @@ namespace CoolSerializer.V3
 
         public Expression GetGetExpression(Expression graphParam, params Expression[] indexerParameters)
         {
-            if (mInfo == null)
-            {
-                throw new NotSupportedException();
-            }
             return Expression.MakeMemberAccess(graphParam, mInfo);
         }
 
         public Expression GetSetExpression(Expression graphParam, Expression graphFieldValue, params Expression[] indexerParameters)
         {
-            if (mInfo == null)
-            {
-                return graphFieldValue;
-            }
             return Expression.Assign(Expression.MakeMemberAccess(graphParam, mInfo), graphFieldValue);
         }
     }

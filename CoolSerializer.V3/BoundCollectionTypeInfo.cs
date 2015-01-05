@@ -47,7 +47,7 @@ namespace CoolSerializer.V3
                 throw new NotSupportedException("Collection does not have fields");
             }
         }
-        public Expression GetDeserializeExpression(Expression readerParam, Deserializer deserializer)
+        public Expression GetDeserializeExpression(Expression readerParam,TypeInfo info, Deserializer deserializer)
         {
             var countParam = Expression.Parameter(typeof(int), "count");
             var readInt32 = Expression.Assign(countParam, Expression.Call(readerParam, "ReadInt32", null));

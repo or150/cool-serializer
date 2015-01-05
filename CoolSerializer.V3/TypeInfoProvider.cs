@@ -14,6 +14,15 @@ namespace CoolSerializer.V3
 
     public class ExtraData
     {
+        internal ExtraData()
+        {
+        }
+
+        internal ExtraData(TypeInfo info)
+        {
+            TypeInfo = info;
+            ExtraFields = new List<ExtraField>();
+        }
         public TypeInfo TypeInfo { get; set; }
         public List<ExtraField> ExtraFields { get; set; }
     }
@@ -22,9 +31,9 @@ namespace CoolSerializer.V3
     {
     }
 
-    public class ExtraField<T> : ExtraField
+    internal class ExtraField<T> : ExtraField
     {
-        T FieldValue { get; set; }
+        public T FieldValue { get; set; }
     }
 
     public class TypeInfoProvider
