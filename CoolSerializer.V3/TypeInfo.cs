@@ -87,8 +87,8 @@ namespace CoolSerializer.V3
     enum ComplexHeader : byte
     {
         Null = 0,
-        Value = 1 << 0,//1 << 7,
-        Reference = 1 << 1,//1 << 6,
+        Value = 1 << 0,
+        Reference = 1 << 1,
         Boxing = Value + Reference
     }
 }
