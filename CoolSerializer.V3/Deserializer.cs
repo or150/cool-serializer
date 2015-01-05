@@ -87,6 +87,7 @@ namespace CoolSerializer.V3
             return (T) mVisitedObjects[reader.ReadInt32()];
         }
 
+        // ReSharper disable once UnusedMember.Local
         private void AddToVisitedObjects<T>(T obj)
         {
             mVisitedObjects.Add(obj);
