@@ -11,7 +11,7 @@ namespace CoolSerializer.V3
     public class Serializer
     {
         private readonly TypeInfoProvider mProvider = new TypeInfoProvider();
-        private readonly TypeInfoBinder mBinder = new TypeInfoBinder(new BasicSimplifersProvider());
+        private readonly IBoundTypeInfoFactory mBinder = new TypeInfoBinder(new BasicSimplifersProvider());
         private readonly ConcurrentDictionary<TypeInfo, Delegate> mSerializeMethods = new ConcurrentDictionary<TypeInfo, Delegate>(TypeInfoEqualityComparer.Instance);
         
         private Dictionary<object, int> mVisitedObjects;

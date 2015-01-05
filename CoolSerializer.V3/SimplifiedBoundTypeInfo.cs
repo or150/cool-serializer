@@ -7,6 +7,31 @@ using System.Runtime.Serialization;
 
 namespace CoolSerializer.V3
 {
+    class SimplifiedBoundTypeInfoProvider : IBoundTypeInfoProvider
+    {
+        private readonly ISimplifersProvider mSimplifiersProvider;
+
+        public SimplifiedBoundTypeInfoProvider(ISimplifersProvider simplifiersProvider)
+        {
+            mSimplifiersProvider = simplifiersProvider;
+        }
+
+        public bool TryProvide(TypeInfo info, out IBoundTypeInfo boundTypeInfo)
+        {
+            object simplifer;
+            var realType = Type.GetType(info.Name);
+
+
+            if (realType != null && mSimplifiersProvider.TryProvide(realType, out simplifer))
+            {
+                boundTypeInfo = new SimplifiedBoundTypeInfo(info, simplifer);
+                return true;
+            }
+            boundTypeInfo = null;
+            return false;
+        }
+    }
+
     public class SimplifiedBoundTypeInfo : BoundTypeInfo
     {
         private readonly object mSimplifier;
