@@ -86,9 +86,17 @@ namespace CoolSerializer.V3
                 sReadArr = s.ToArray();
                 s.Position = 0;
             }
-            var myObj = deserializer.Deserialize(s);
+            var myObj = (Graph)deserializer.Deserialize(s);
+            //myObj.Arr2 = new[] { 6.98f, 7.0f, 6f };
             s.Position = 0;
-            ser.Serialize(s, myObj);
+            //ser.Serialize(s, myObj);
+
+            //using (var sWrite = File.Open(@"..\asd.txt", FileMode.Create))
+            //{
+            //    ser.Serialize(sWrite, myObj);
+            //    sWrite.Position = 0;
+            //}
+
             var count = 1000 * 1000;
 
             var time = Stopwatch.StartNew();
@@ -140,12 +148,14 @@ namespace CoolSerializer.V3
 
     public class Graph : IExtraDataHolder
     {
-        //public int[] Arr { get; set; }
-        //public ICollection Coll { get; set; }
+        public int[] Arr { get; set; }
+        public ICollection Coll { get; set; }
         public int X { get; set; }
         public int Y { get; set; }
         public InnerGraph Z { get; set; }
         public InnerStruct S { get; set; }
+
+        public float[] Arr2 { get; set; }
         public ExtraData ExtraData { get; set; }
     }
 

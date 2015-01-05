@@ -39,72 +39,24 @@ namespace CoolSerializer.V3
     public class TypeInfoProvider
     {
         readonly ConcurrentDictionary<Type, TypeInfo> mInfos = new ConcurrentDictionary<Type, TypeInfo>(EqualityComparer<Type>.Default);
-        static class TypeInfoHelper<T>
-        {
-            private static bool mIsClass;
-            private static Type mType;
-            private static bool mIsPrimitive;
-            private static bool mIsExtraDataHolder;
-            private static Func<T, TypeInfo> mGetExtraDataTypeInfo;
-
-            static TypeInfoHelper()
-            {
-                mIsClass = !typeof(T).IsValueType || Nullable.GetUnderlyingType(typeof(T)) != null;
-                mType = typeof(T);
-                mIsPrimitive = (Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T)).GetRawType() != FieldType.Object;
-                mIsExtraDataHolder = typeof(IExtraDataHolder).IsAssignableFrom(typeof(T));
-                if (mIsExtraDataHolder)
-                {
-                    mGetExtraDataTypeInfo = CreateGetExtraDataTypeInfo();
-                }
-            }
-
-            private static Func<T, TypeInfo> CreateGetExtraDataTypeInfo()
-            {
-                var param = Expression.Parameter(typeof(T));
-                var extraData = Expression.MakeMemberAccess(param, typeof(IExtraDataHolder).GetProperty("ExtraData", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic));
-                var typeInfo = Expression.MakeMemberAccess(extraData, typeof(ExtraData).GetProperty("TypeInfo", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic));
-                var condition = Expression.ReferenceNotEqual(extraData, Expression.Constant(null, typeof(ExtraData)));
-                var returnLabel = Expression.Label(typeof(TypeInfo));
-                var ifThenElse = Expression.IfThenElse(condition, Expression.Return(returnLabel, typeInfo), Expression.Return(returnLabel, Expression.Constant(null, typeof(TypeInfo))));
-                var lambda = Expression.Lambda<Func<T, TypeInfo>>(Expression.Block(ifThenElse, Expression.Label(returnLabel, Expression.Constant(null, typeof(TypeInfo)))), new[] { param });
-                return lambda.Compile();
-            }
-
-            public static Type ProvideType(T graph)
-            {
-                return mIsClass && graph != null ? graph.GetType() : mType;
-            }
-
-            public static TypeInfo GetExtraDataTypeInfo(T graph)
-            {
-                if (mIsClass && graph != null)
-                {
-                    var holder = graph as IExtraDataHolder;
-                    if (holder != null && holder.ExtraData != null)
-                    {
-                        return holder.ExtraData.TypeInfo;
-                    }
-                }
-                if (mIsExtraDataHolder)
-                {
-                    return mGetExtraDataTypeInfo(graph);
-                }
-                return null;
-            }
-
-        }
+        readonly ConcurrentDictionary<TypeInfo,TypeInfo> mMergedInfos = new ConcurrentDictionary<TypeInfo, TypeInfo>(TypeInfoEqualityComparer.Instance);
         public TypeInfo Provide<T>(T graph)
         {
+            var type = TypeInfoHelper<T>.ProvideType(graph);
             var extraInfo = TypeInfoHelper<T>.GetExtraDataTypeInfo(graph);
             if (extraInfo != null)
             {
-                return extraInfo;
+                return mMergedInfos.GetOrAdd(extraInfo, x => MergeExtraInfos(x, type));
             }
-            var type = TypeInfoHelper<T>.ProvideType(graph);
             return mInfos.GetOrAdd(type, CreateTypeInfo);
         }
 
+        private TypeInfo MergeExtraInfos(TypeInfo arg, Type type)
+        {
+            var info = CreateTypeInfo(type);
+            var fields = info.Fields.Union(arg.Fields, FieldEqualityComparer.Instance).ToArray();
+            return new TypeInfo(info.Guid,info.Name,info.RawType,fields,info.IsAlwaysByVal);
+        }
         private TypeInfo CreateTypeInfo(Type t)
         {
             var rawType = t.GetRawType();
@@ -147,6 +99,86 @@ namespace CoolSerializer.V3
                 return new CollectionFieldInfo(elementType.GetRawType(),p.Name);
             }
             return new FieldInfo(rawType, p.Name);
+        }
+    }
+
+    internal static class TypeInfoHelper<T>
+    {
+        private static bool mIsClass;
+        private static Type mType;
+        private static bool mIsPrimitive;
+        private static bool mIsExtraDataHolder;
+        private static Func<T, TypeInfo> mGetExtraDataTypeInfo;
+
+        static TypeInfoHelper()
+        {
+            mIsClass = !typeof(T).IsValueType || Nullable.GetUnderlyingType(typeof(T)) != null;
+            mType = typeof(T);
+            mIsPrimitive = (Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T)).GetRawType() != FieldType.Object;
+            mIsExtraDataHolder = typeof(IExtraDataHolder).IsAssignableFrom(typeof(T));
+            if (mIsExtraDataHolder)
+            {
+                mGetExtraDataTypeInfo = CreateGetExtraDataTypeInfo();
+            }
+        }
+
+        private static Func<T, TypeInfo> CreateGetExtraDataTypeInfo()
+        {
+            var param = Expression.Parameter(typeof(T));
+            var extraData = Expression.MakeMemberAccess(param, typeof(IExtraDataHolder).GetProperty("ExtraData", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic));
+            var typeInfo = Expression.MakeMemberAccess(extraData, typeof(ExtraData).GetProperty("TypeInfo", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic));
+            var condition = Expression.ReferenceNotEqual(extraData, Expression.Constant(null, typeof(ExtraData)));
+            var returnLabel = Expression.Label(typeof(TypeInfo));
+            var ifThenElse = Expression.IfThenElse(condition, Expression.Return(returnLabel, typeInfo), Expression.Return(returnLabel, Expression.Constant(null, typeof(TypeInfo))));
+            var lambda = Expression.Lambda<Func<T, TypeInfo>>(Expression.Block(ifThenElse, Expression.Label(returnLabel, Expression.Constant(null, typeof(TypeInfo)))), new[] { param });
+            return lambda.Compile();
+        }
+
+        public static Type ProvideType(T graph)
+        {
+            return mIsClass && graph != null ? graph.GetType() : mType;
+        }
+
+        public static TypeInfo GetExtraDataTypeInfo(T graph)
+        {
+            if (mIsClass && graph != null)
+            {
+                var holder = graph as IExtraDataHolder;
+                if (holder != null && holder.ExtraData != null)
+                {
+                    return holder.ExtraData.TypeInfo;
+                }
+            }
+            if (mIsExtraDataHolder)
+            {
+                return mGetExtraDataTypeInfo(graph);
+            }
+            return null;
+        }
+
+    }
+
+    class FieldEqualityComparer : IEqualityComparer<FieldInfo>
+    {
+        public static FieldEqualityComparer Instance { get; private set; }
+
+        static FieldEqualityComparer()
+        {
+            Instance = new FieldEqualityComparer();
+        }
+
+        private FieldEqualityComparer()
+        {
+
+        }
+        public bool Equals(FieldInfo x, FieldInfo y)
+        {
+            return x.Name == y.Name;
+        }
+
+        public int GetHashCode(FieldInfo obj)
+        {
+            return obj.Name.GetHashCode();
         }
     }
 }

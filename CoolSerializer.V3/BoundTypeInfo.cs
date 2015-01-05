@@ -126,10 +126,6 @@ namespace CoolSerializer.V3
             if (fieldInfo.Type.IsComplex())
             {
                 RealType = typeof(object); //TODO: make it better
-                if (fieldInfo.Type == FieldType.Collection)
-                {
-                    RealType = typeof (IEnumerable);
-                }
             }
             else
             {
