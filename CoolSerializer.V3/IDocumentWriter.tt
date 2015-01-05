@@ -13,7 +13,7 @@ namespace CoolSerializer.V3
 {
 	public interface IDocumentWriter
 	{
-<#		 foreach (var o in Enum.GetValues(typeof(FieldType)).Cast<FieldType>().Where(x=>x != FieldType.Object))
+<#		 foreach (var o in Enum.GetValues(typeof(FieldType)).Cast<FieldType>().Where(x=>x != FieldType.Object && x!= FieldType.Collection))
 		{#>
 		<#=string.Format("void Write{0}({0} {1});", o, o.ToString().ToLower()[0])#>
 <#		/*="case FieldType."+o+@":

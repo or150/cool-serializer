@@ -13,7 +13,7 @@ namespace CoolSerializer.V3
 {
 	public interface IDocumentReader
 	{
-<#		 foreach (var o in Enum.GetValues(typeof(FieldType)).Cast<FieldType>().Where(x=>x != FieldType.Object))
+<#		 foreach (var o in Enum.GetValues(typeof(FieldType)).Cast<FieldType>().Where(x=>x != FieldType.Object && x!= FieldType.Collection))
 		{#>
 		<#=string.Format("{0} Read{0}();", o)#>
 <#/*=		"case FieldType."+o+@":
