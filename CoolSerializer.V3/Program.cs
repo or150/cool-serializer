@@ -70,7 +70,7 @@ namespace CoolSerializer.V3
             //    return x;
             //}).ToList();
 
-            //var ser = new Serializer();
+            var ser = new Serializer();
             //using (var sWrite = File.Open(@"..\asd.txt", FileMode.Create))
             //{
             //    ser.Serialize(sWrite, graph);
@@ -79,13 +79,16 @@ namespace CoolSerializer.V3
 
             var deserializer = new Deserializer();
             var s = new MemoryStream();
+            byte[] sReadArr = null;
             using (var sRead = File.Open(@"..\asd.txt", FileMode.Open))
             {
                 sRead.CopyTo(s);
+                sReadArr = s.ToArray();
                 s.Position = 0;
             }
             var myObj = deserializer.Deserialize(s);
-
+            s.Position = 0;
+            ser.Serialize(s, myObj);
             var count = 1000 * 1000;
 
             var time = Stopwatch.StartNew();

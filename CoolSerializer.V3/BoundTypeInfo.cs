@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -125,6 +126,10 @@ namespace CoolSerializer.V3
             if (fieldInfo.Type.IsComplex())
             {
                 RealType = typeof(object); //TODO: make it better
+                if (fieldInfo.Type == FieldType.Collection)
+                {
+                    RealType = typeof (IEnumerable);
+                }
             }
             else
             {
@@ -169,33 +174,45 @@ namespace CoolSerializer.V3
     public class ExtraDataBoundFieldInfo : EmptyBoundFieldInfo
     {
         private readonly int mExtraItemNumber;
+        private readonly Type mExtraFieldType;
+        private readonly PropertyInfo mExtraFieldValueProp;
 
         public ExtraDataBoundFieldInfo(FieldInfo fieldInfo, int extraItemNumber)
             : base(fieldInfo)
         {
             mExtraItemNumber = extraItemNumber;
+            mExtraFieldType = typeof(ExtraField<>).MakeGenericType(RealType);
+            mExtraFieldValueProp = mExtraFieldType.GetProperty("FieldValue", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
         }
 
         public override Expression GetGetExpression(Expression graphParam, params Expression[] indexerParameters)
         {
-            return base.GetGetExpression(graphParam, indexerParameters);
+            var indexerProp = typeof (List<ExtraField>).GetProperty("Item");
+            var getItemFromList = Expression.MakeIndex(GetExtraFieldsListExpression(graphParam), indexerProp, new[] {Expression.Constant(mExtraItemNumber)});
+            var castToRightType = Expression.Convert(getItemFromList, mExtraFieldType);
+            var accessValue = Expression.MakeMemberAccess(castToRightType, mExtraFieldValueProp);
+            return accessValue;
         }
 
         public override Expression GetSetExpression(Expression graphParam, Expression graphFieldValue, params Expression[] indexerParameters)
         {
             //TODO: check for nulls!
-            var extraFieldType = typeof(ExtraField<>).MakeGenericType(RealType);
-            var extraFieldValueProp = extraFieldType.GetProperty("FieldValue", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            var extraDataProp = typeof(IExtraDataHolder).GetProperty("ExtraData", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            var extraFieldsProp = typeof(ExtraData).GetProperty("ExtraFields", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            var extraData = Expression.MakeMemberAccess(Expression.MakeMemberAccess(graphParam, extraDataProp), extraFieldsProp);
-
-            var tempParam = Expression.Parameter(extraFieldType, "temp");
-            var extraFieldCreation = Expression.Assign(tempParam, Expression.New(extraFieldType));
-            var assignValue = Expression.Assign(Expression.MakeMemberAccess(tempParam, extraFieldValueProp), graphFieldValue);
+            var extraData = GetExtraFieldsListExpression(graphParam);
+            var tempParam = Expression.Parameter(mExtraFieldType, "temp");
+            var extraFieldCreation = Expression.Assign(tempParam, Expression.New(mExtraFieldType));
+            var assignValue = Expression.Assign(Expression.MakeMemberAccess(tempParam, mExtraFieldValueProp), graphFieldValue);
             var addToCollection = Expression.Call(extraData, "Add", null, tempParam);
             return Expression.Block(new[] {tempParam}, extraFieldCreation, assignValue, addToCollection);
-            return null;
+        }
+
+        private static MemberExpression GetExtraFieldsListExpression(Expression graphParam)
+        {
+            var extraDataProp = typeof (IExtraDataHolder).GetProperty("ExtraData",
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            var extraFieldsProp = typeof (ExtraData).GetProperty("ExtraFields",
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            var extraData = Expression.MakeMemberAccess(Expression.MakeMemberAccess(graphParam, extraDataProp), extraFieldsProp);
+            return extraData;
         }
     }
     public class BoundFieldInfo : IBoundFieldInfo
