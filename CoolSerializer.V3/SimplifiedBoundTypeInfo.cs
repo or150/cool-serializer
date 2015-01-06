@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Net;
 using System.Reflection;
 using System.Runtime.Serialization;
 
@@ -51,14 +52,14 @@ namespace CoolSerializer.V3
         {
             mSimplifier = simplifier;
         }
-        protected override void AddFieldsSerializeExpressions(MethodMutationHelper<Serializer> helper)
+        protected override void AddFieldsSerializeExpressions(SerializationMutationHelper helper)
         {
             var simplfiyMethod = SimplifiersHelper.GetSimplifierType(mSimplifier.GetType()).GetMethod("Simplify");
             var simplify = Expression.Call(Expression.Constant(mSimplifier), simplfiyMethod, helper.Graph);
             var simplifiedParam = Expression.Parameter(SimplifiersHelper.GetSimplifiedType(mSimplifier.GetType()), "simplifiedGraph");
             var assSimplified = Expression.Assign(simplifiedParam, simplify);
             
-            helper.Parameters.Add(simplifiedParam);
+            helper.Variables.Add(simplifiedParam);
             helper.MethodBody.Add(assSimplified);
 
             var oldGraph = helper.Graph;
@@ -67,7 +68,7 @@ namespace CoolSerializer.V3
             helper.Graph = oldGraph;
         }
 
-        protected override IEnumerable<Expression> GetFieldsDeserializeExpressions(Expression readerParam, Expression graphParam, Deserializer deserializer, out IEnumerable<ParameterExpression> additionalParams)
+        protected override void GetFieldsDeserializeExpressions(DeserializationMutationHelper helper)
         {
             var simplifiedType = SimplifiersHelper.GetSimplifiedType(mSimplifier.GetType());
             
@@ -75,12 +76,22 @@ namespace CoolSerializer.V3
             
             var simplifiedParam = Expression.Parameter(simplifiedType, "simplifiedGraph");
             var simplifiedParamInit = Expression.Assign(simplifiedParam, Expression.New(simplifiedType));
-            var deserializeExpr =  base.GetFieldsDeserializeExpressions(readerParam, simplifiedParam, deserializer, out additionalParams);
-            var desimplify = Expression.Call(Expression.Constant(mSimplifier), desimpliyMethod, simplifiedParam);
-            var assignment = GetAssignExpr(graphParam, desimplify);
+            
+            helper.Variables.Add(simplifiedParam);
+            helper.MethodBody.Add(simplifiedParamInit);
 
-            additionalParams = additionalParams.Concat(new[] {simplifiedParam});
-            return new[] {simplifiedParamInit}.Concat(deserializeExpr).Concat(new []{assignment});
+            var oldGraph = helper.Graph;
+            helper.Graph = simplifiedParam;
+            base.GetFieldsDeserializeExpressions(helper);
+            helper.Graph = oldGraph;
+
+            var desimplify = Expression.Call(Expression.Constant(mSimplifier), desimpliyMethod, simplifiedParam);
+            var assignment = GetAssignExpr(helper.Graph, desimplify);
+
+            helper.MethodBody.Add(assignment);
+
+            //additionalParams = additionalParams.Concat(new[] {simplifiedParam});
+            //return new[] {simplifiedParamInit}.Concat(deserializeExpr).Concat(new []{assignment});
             //return Expression.Block(new[] { simplifiedParam }, simplifiedParamInit, deserializeExpr, assignment);
         }
 

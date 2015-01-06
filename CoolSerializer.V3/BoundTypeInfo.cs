@@ -47,8 +47,8 @@ namespace CoolSerializer.V3
         public Expression GetSerializeExpression(Expression graphParam, Expression writerParam, Serializer serializer)
         {
             var castedGraph = Expression.Variable(this.RealType, "castedGraph");
-            var helper = new MethodMutationHelper<Serializer>(serializer, castedGraph, writerParam);
-            helper.Parameters.Add(castedGraph);
+            var helper = new SerializationMutationHelper(serializer, castedGraph, writerParam);
+            helper.Variables.Add(castedGraph);
 
             var castExpression = Expression.Assign(castedGraph, Expression.Convert(graphParam, this.RealType));
             var writeHeaderExpr = Expression.Call(writerParam, "WriteByte", null,
@@ -61,16 +61,16 @@ namespace CoolSerializer.V3
 
             AddFieldsSerializeExpressions(helper);
 
-            var block = Expression.Block(helper.Parameters,helper.MethodBody);
+            var block = Expression.Block(helper.Variables,helper.MethodBody);
             return block;
         }
 
-        protected virtual void AddFieldsSerializeExpressions(MethodMutationHelper<Serializer> helper)
+        protected virtual void AddFieldsSerializeExpressions(SerializationMutationHelper helper)
         {
             foreach (var field in this.Fields)
             {
                 var fieldAccessExpression = field.GetGetExpression(helper.Graph);
-                var serializeExpression = helper.Caller.GetRightSerializeMethod(helper.Writer, fieldAccessExpression, field);
+                var serializeExpression = helper.Serializer.GetRightSerializeMethod(helper.Writer, fieldAccessExpression, field);
                 helper.MethodBody.Add(serializeExpression);
             }
         }
@@ -78,19 +78,31 @@ namespace CoolSerializer.V3
         public Expression GetDeserializeExpression(Expression readerParam, TypeInfo info, Deserializer deserializer)
         {
             var retValParam = Expression.Variable(this.RealType, "retVal");
+            var helper = new DeserializationMutationHelper(deserializer, retValParam, readerParam);
+            helper.Variables.Add(retValParam);
+            
             var creation = this.GetCreateExpression();
             var retValAssignment = Expression.Assign(retValParam, creation);
-            Expression extraDataAssignment = Expression.Empty();
+            helper.MethodBody.Add(retValAssignment);
+
+            //Expression extraDataAssignment = Expression.Empty();
             if (RealType.IsExtraDataHolder())
             {
-                extraDataAssignment = CreateExtraDataInitializationExpression(retValParam, info);
+                var extraDataAssignment = CreateExtraDataInitializationExpression(retValParam, info);
+                helper.MethodBody.Add(extraDataAssignment);
             }
             var addToVisitedObjects = deserializer.GetAddToVisitedObjectsExpr(this, retValParam);
-            IEnumerable<ParameterExpression> additionalParams;
-            var fieldDeserializeExprs = this.GetFieldsDeserializeExpressions(readerParam, retValParam, deserializer, out additionalParams);
+            helper.MethodBody.Add(addToVisitedObjects);
+            //IEnumerable<ParameterExpression> additionalParams;
+            this.GetFieldsDeserializeExpressions(helper);
+            
+            //helper.MethodBody.AddRange(fieldDeserializeExprs);
+            //helper.Variables.AddRange(additionalParams);
+            helper.MethodBody.Add(retValParam);
 
-            var block = Expression.Block(new[] { retValParam }.Concat(additionalParams),
-                new[] { retValAssignment, extraDataAssignment, addToVisitedObjects }.Concat(fieldDeserializeExprs).Concat(new[] { retValParam }));
+            //var block = Expression.Block(new[] { retValParam }.Concat(additionalParams),
+            //    new[] { retValAssignment, extraDataAssignment, addToVisitedObjects }.Concat(fieldDeserializeExprs).Concat(new[] { retValParam }));
+            var block = Expression.Block(helper.Variables, helper.MethodBody);
             return block;
         }
 
@@ -102,18 +114,18 @@ namespace CoolSerializer.V3
             return Expression.Assign(Expression.MakeMemberAccess(graphParam, extraData), createExtraData);
         }
 
-        protected virtual IEnumerable<Expression> GetFieldsDeserializeExpressions(Expression readerParam, Expression graphParam, Deserializer deserializer, out IEnumerable<ParameterExpression> additionalParams)
+        protected virtual void GetFieldsDeserializeExpressions(DeserializationMutationHelper helper)
         {
-            var fieldDeserializeExprs = new List<Expression>();
+            //var fieldDeserializeExprs = new List<Expression>();
 
             foreach (var field in this.Fields)
             {
-                var castedDes = deserializer.GetRightDeserializeMethod(readerParam, field);
-                var assignment = field.GetSetExpression(graphParam, castedDes);
-                fieldDeserializeExprs.Add(assignment);
+                var castedDes = helper.Deserializer.GetRightDeserializeMethod(helper.Reader, field);
+                var assignment = field.GetSetExpression(helper.Graph, castedDes);
+                helper.MethodBody.Add(assignment);
             }
-            additionalParams = Enumerable.Empty<ParameterExpression>();
-            return fieldDeserializeExprs;
+            //additionalParams = Enumerable.Empty<ParameterExpression>();
+            //return fieldDeserializeExprs;
         }
 
         protected virtual Expression GetCreateExpression()

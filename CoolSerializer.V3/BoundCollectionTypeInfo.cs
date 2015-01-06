@@ -147,7 +147,6 @@ namespace CoolSerializer.V3
             }
             else
             {
-                elementType = elementType;
                 IsGeneric = true;
             }
 

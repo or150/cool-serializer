@@ -9,12 +9,12 @@ namespace CoolSerializer.V3
 {
     class Program
     {
-        static void Main(string[] args)
+        private static Graph CreateGraph()
         {
             var graph = new Graph()
             {
                 //Arr = new[] { 1, 3, 4, 5 },
-                //Coll = new ArrayList() { 4, 5, 6, 7, null, 9 },
+                Coll = new ArrayList() { 4, 5, 6, 7, null, 9 ,Guid.NewGuid()},
                 S = new InnerStruct
                 {
                     I = 5,
@@ -30,17 +30,30 @@ namespace CoolSerializer.V3
             };
 
             ((InnerGraphDerived)graph.Z).Surprise = graph;
+            return graph;
+        }
 
+        private static Dictionary<int, object> CreateMyBadClass()
+        {
+            var graph = new Dictionary<int, object>
+            {
+                {6, "6"},
+                {12, "SAD"},
+                {4, "but"},
+                {5, "true"},
+                {9, new MyBadClass(67, "89")}
+            };
+            ((MyBadClass)graph[9]).InitBadClass((MyBadClass)graph[9]);
+            return graph;
+        }
+        static void Main(string[] args)
+        {
+            //var graph = CreateGraph();
 
-            //var graph = new Dictionary<int, object>
-            //{
-            //    {6,"6"},
-            //    {12,"SAD"},
-            //    {4, "but"},
-            //    {5, "true"},
-            //    {9, new MyBadClass(67, "89")}
-            //};
-            //((MyBadClass)graph[9]).InitBadClass((MyBadClass)graph[9]);
+            var graph = Enumerable.Range(0, 100).Select((x) => CreateGraph())
+                .Concat<object>(Enumerable.Range(0, 100).Select(x => CreateMyBadClass())).ToList();
+            //var graph = CreateMyBadClass();
+
 
 
             //var graph = new Graph() {Z = new InnerGraph() {H = 9}};
