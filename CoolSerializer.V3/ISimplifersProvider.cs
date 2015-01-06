@@ -7,11 +7,12 @@ namespace CoolSerializer.V3
     public interface ISimplifersProvider
     {
         bool TryProvide(Type realType, out object simplifer);
+        bool TryGetSimplifiedType(Type realType, out Type simplifiedType);
     }
 
     class BasicSimplifersProvider : ISimplifersProvider
     {
-        private Dictionary<Type,Type> mSimplifiers = new Dictionary<Type, Type>();
+        private readonly Dictionary<Type,Type> mSimplifiers = new Dictionary<Type, Type>();
 
         public BasicSimplifersProvider()
         {
@@ -20,43 +21,52 @@ namespace CoolSerializer.V3
         }
         public bool TryProvide(Type realType, out object simplifer)
         {
-            Type simpliferType;
-            if (mSimplifiers.TryGetValue(realType, out simpliferType))
+            Type simplifierType;
+            if (TryProvideType(realType, out simplifierType))
             {
-                simplifer = Activator.CreateInstance(simpliferType);
+                simplifer = Activator.CreateInstance(simplifierType);
+                return true;
+            }
+            simplifer = null;
+            return false;
+        }
+
+        private bool TryProvideType(Type realType, out Type simplifierType)
+        {
+            if (mSimplifiers.TryGetValue(realType, out simplifierType))
+            {
                 return true;
             }
 
             if (realType.IsGenericType)
             {
                 var genericType = realType.GetGenericTypeDefinition();
-                if (mSimplifiers.TryGetValue(genericType, out simpliferType))
+                Type genericSimplifierType;
+                if (mSimplifiers.TryGetValue(genericType, out genericSimplifierType))
                 {
-                    var simpliferInterface = GetSimpliferInterface(simpliferType);
-                    var realTypeWithGenericArgs = GetRealType(simpliferInterface);
-                    
+                    var realTypeWithGenericArgs = SimplifiersHelper.GetRealType(genericSimplifierType);
+
                     var genericArguments = realTypeWithGenericArgs.GetGenericArguments();
                     var arguments = realType.GetGenericArguments();
                     var argsMap = genericArguments.Zip(arguments, Tuple.Create).ToDictionary(x => x.Item1, x => x.Item2);
 
-                    var type = simpliferType.MakeGenericType(simpliferType.GetGenericArguments().Select(x => argsMap[x]).ToArray());
-                    simplifer = Activator.CreateInstance(type);
+                    simplifierType = genericSimplifierType.MakeGenericType(genericSimplifierType.GetGenericArguments().Select(x => argsMap[x]).ToArray());
                     return true;
                 }
             }
-            simplifer = null;
             return false;
         }
 
-        private static Type GetRealType(Type simpliferInterface)
+        public bool TryGetSimplifiedType(Type realType, out Type simplifiedType)
         {
-            return simpliferInterface.GetGenericArguments()[0];
-        }
-
-        private static Type GetSimpliferInterface(Type simpliferType)
-        {
-            return simpliferType.GetInterfaces()
-                .First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof (ISimpifier<,>));
+            Type simplifierType;
+            if (TryProvideType(realType, out simplifierType))
+            {
+                simplifiedType = SimplifiersHelper.GetSimplifiedType(simplifierType);
+                return true;
+            }
+            simplifiedType = null;
+            return false;
         }
     }
 

@@ -11,36 +11,36 @@ namespace CoolSerializer.V3
     {
         static void Main(string[] args)
         {
-            var graph = new Graph()
-            {
-                //Arr = new[] { 1, 3, 4, 5 },
-                //Coll = new ArrayList() { 4, 5, 6, 7, null, 9 },
-                S = new InnerStruct
-                {
-                    I = 5,
-                    L = 1
-                },
-                Z = new InnerGraphDerived()
-                {
-                    H = 6,
-                    Prop = "asd",
-                    Surprise = null,
-                    MyInt = 29
-                },
-            };
-
-            ((InnerGraphDerived)graph.Z).Surprise = graph;
-
-
-            //var graph = new Dictionary<int, object>
+            //var graph = new Graph()
             //{
-            //    {6,"6"},
-            //    {12,"SAD"},
-            //    {4, "but"},
-            //    {5, "true"},
-            //    {9, new MyBadClass(67, "89")}
+            //    //Arr = new[] { 1, 3, 4, 5 },
+            //    //Coll = new ArrayList() { 4, 5, 6, 7, null, 9 },
+            //    S = new InnerStruct
+            //    {
+            //        I = 5,
+            //        L = 1
+            //    },
+            //    Z = new InnerGraphDerived()
+            //    {
+            //        H = 6,
+            //        Prop = "asd",
+            //        Surprise = null,
+            //        MyInt = 29
+            //    },
             //};
-            //((MyBadClass)graph[9]).InitBadClass((MyBadClass)graph[9]);
+
+            //((InnerGraphDerived)graph.Z).Surprise = graph;
+
+
+            var graph = new Dictionary<int, object>
+            {
+                {6,"6"},
+                {12,"SAD"},
+                {4, "but"},
+                {5, "true"},
+                {9, new MyBadClass(67, "89")}
+            };
+            ((MyBadClass)graph[9]).InitBadClass((MyBadClass)graph[9]);
 
 
             //var graph = new Graph() {Z = new InnerGraph() {H = 9}};
@@ -71,11 +71,11 @@ namespace CoolSerializer.V3
             //}).ToList();
 
             var ser = new Serializer();
-            //using (var sWrite = File.Open(@"..\asd.txt", FileMode.Create))
-            //{
-            //    ser.Serialize(sWrite, graph);
-            //    sWrite.Position = 0;
-            //}
+            using (var sWrite = File.Open(@"..\asd.txt", FileMode.Create))
+            {
+                ser.Serialize(sWrite, graph);
+                sWrite.Position = 0;
+            }
 
             var deserializer = new Deserializer();
             var s = new MemoryStream();
@@ -86,10 +86,10 @@ namespace CoolSerializer.V3
                 sReadArr = s.ToArray();
                 s.Position = 0;
             }
-            var myObj = (Graph)deserializer.Deserialize(s);
+            var myObj = deserializer.Deserialize(s);
             //myObj.Arr2 = new[] { 6.98f, 7.0f, 6f };
             s.Position = 0;
-            //ser.Serialize(s, myObj);
+            ser.Serialize(s, myObj);
 
             //using (var sWrite = File.Open(@"..\asd.txt", FileMode.Create))
             //{

@@ -38,16 +38,23 @@ namespace CoolSerializer.V3
 
     public class TypeInfoProvider
     {
+        private readonly ISimplifersProvider mSimplifersProvider;
         readonly ConcurrentDictionary<Type, TypeInfo> mInfos = new ConcurrentDictionary<Type, TypeInfo>(EqualityComparer<Type>.Default);
         readonly ConcurrentDictionary<TypeInfo,TypeInfo> mMergedInfos = new ConcurrentDictionary<TypeInfo, TypeInfo>(TypeInfoEqualityComparer.Instance);
+
+        public TypeInfoProvider(ISimplifersProvider simplifersProvider)
+        {
+            mSimplifersProvider = simplifersProvider;
+        }
+
         public TypeInfo Provide<T>(T graph)
         {
-            var type = TypeInfoHelper<T>.ProvideType(graph);
             var extraInfo = TypeInfoHelper<T>.GetExtraDataTypeInfo(graph);
             if (extraInfo != null)
             {
-                return mMergedInfos.GetOrAdd(extraInfo, x => MergeExtraInfos(x, type));
+                return mMergedInfos.GetOrAdd(extraInfo, x => MergeExtraInfos(x, TypeInfoHelper<T>.ProvideType(graph)));
             }
+            var type = TypeInfoHelper<T>.ProvideType(graph);
             return mInfos.GetOrAdd(type, CreateTypeInfo);
         }
 
@@ -67,9 +74,19 @@ namespace CoolSerializer.V3
             }
             else
             {
-                fields = ProvideFields(t);
+                fields = ProvideFields(GetRightType(t));
             }
             return new TypeInfo(Guid.NewGuid(), t.FullName, rawType, fields, t.IsValueType);
+        }
+
+        private Type GetRightType(Type type)
+        {
+            Type simplifiedType;
+            if (mSimplifersProvider.TryGetSimplifiedType(type, out simplifiedType))
+            {
+                return simplifiedType;
+            }
+            return type;
         }
 
         private FieldInfo[] ProvideFields(Type type)

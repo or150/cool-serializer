@@ -10,11 +10,19 @@ namespace CoolSerializer.V3
 {
     public class Serializer
     {
-        private readonly TypeInfoProvider mProvider = new TypeInfoProvider();
-        private readonly IBoundTypeInfoFactory mBinder = new TypeInfoBinder(new BasicSimplifersProvider());
+        private readonly BasicSimplifersProvider mBasicSimplifersProvider;
+        private readonly TypeInfoProvider mProvider;
+        private readonly IBoundTypeInfoFactory mBinder;
         private readonly ConcurrentDictionary<TypeInfo, Delegate> mSerializeMethods = new ConcurrentDictionary<TypeInfo, Delegate>(TypeInfoEqualityComparer.Instance);
         
         private Dictionary<object, int> mVisitedObjects;
+
+        public Serializer()
+        {
+            mBasicSimplifersProvider = new BasicSimplifersProvider();
+            mProvider = new TypeInfoProvider(mBasicSimplifersProvider);
+            mBinder = new TypeInfoBinder(mBasicSimplifersProvider);
+        }
 
         public void Serialize(Stream stream, object graph)
         {
