@@ -52,10 +52,11 @@ namespace CoolSerializer.V3
                 Expression.Constant((byte)ComplexHeader.Value));
             var writeTypeInfoExpr = Expression.Call(writerParam, "WriteTypeInfo", null, Expression.Constant(TypeInfo));
 
-            var fieldSerializeExprs = this.GetFieldsSerializeExpressions(writerParam, castedGraph, serializer);
+            IEnumerable<ParameterExpression> additionalParams;
+            var fieldSerializeExprs = this.GetFieldsSerializeExpressions(writerParam, castedGraph, serializer, out additionalParams);
 
-            var block = Expression.Block(new[] { castedGraph },
-                new Expression[] { castExpression, writeHeaderExpr, writeTypeInfoExpr }.Concat(new[] { fieldSerializeExprs }));
+            var block = Expression.Block(new[] { castedGraph }.Concat(additionalParams),
+                new Expression[] { castExpression, writeHeaderExpr, writeTypeInfoExpr }.Concat(fieldSerializeExprs));
             return block;
         }
 
@@ -103,7 +104,7 @@ namespace CoolSerializer.V3
             return Expression.New(RealType);
         }
 
-        protected virtual Expression GetFieldsSerializeExpressions(Expression writerParam, Expression graphParam, Serializer serializer)
+        protected virtual IEnumerable<Expression> GetFieldsSerializeExpressions(Expression writerParam, Expression graphParam, Serializer serializer, out IEnumerable<ParameterExpression> additionalParams)
         {
             var fieldSerializeExprs = new List<Expression>();
 
@@ -113,7 +114,8 @@ namespace CoolSerializer.V3
                 var serializeExpression = serializer.GetRightSerializeMethod(writerParam, fieldAccessExpression, field);
                 fieldSerializeExprs.Add(serializeExpression);
             }
-            return Expression.Block(fieldSerializeExprs);
+            additionalParams = Enumerable.Empty<ParameterExpression>();
+            return fieldSerializeExprs;
         }
 
     }

@@ -51,14 +51,15 @@ namespace CoolSerializer.V3
         {
             mSimplifier = simplifier;
         }
-        protected override Expression GetFieldsSerializeExpressions(Expression writerParam, Expression graphParam, Serializer serializer)
+        protected override IEnumerable<Expression> GetFieldsSerializeExpressions(Expression writerParam, Expression graphParam, Serializer serializer, out IEnumerable<ParameterExpression> additionalParams)
         {
             var simplfiyMethod = SimplifiersHelper.GetSimplifierType(mSimplifier.GetType()).GetMethod("Simplify");
             var simplify = Expression.Call(Expression.Constant(mSimplifier), simplfiyMethod, graphParam);
             var simplifiedParam = Expression.Parameter(SimplifiersHelper.GetSimplifiedType(mSimplifier.GetType()), "simplifiedGraph");
             var assSimplified = Expression.Assign(simplifiedParam, simplify);
-            var serializeSimplified = base.GetFieldsSerializeExpressions(writerParam, simplifiedParam, serializer);
-            return Expression.Block(new[] {simplifiedParam}, assSimplified, serializeSimplified);
+            var serializeSimplified = base.GetFieldsSerializeExpressions(writerParam, simplifiedParam, serializer, out additionalParams);
+            additionalParams = additionalParams.Concat(new[] {simplifiedParam});
+            return new[] {assSimplified}.Concat(serializeSimplified);
         }
 
         protected override Expression GetFieldsDeserializeExpressions(Expression readerParam, Expression graphParam, Deserializer deserializer)
