@@ -58,11 +58,12 @@ namespace CoolSerializer.V3
             var simplifiedParam = Expression.Parameter(SimplifiersHelper.GetSimplifiedType(mSimplifier.GetType()), "simplifiedGraph");
             var assSimplified = Expression.Assign(simplifiedParam, simplify);
             var serializeSimplified = base.GetFieldsSerializeExpressions(writerParam, simplifiedParam, serializer, out additionalParams);
+            
             additionalParams = additionalParams.Concat(new[] {simplifiedParam});
             return new[] {assSimplified}.Concat(serializeSimplified);
         }
 
-        protected override Expression GetFieldsDeserializeExpressions(Expression readerParam, Expression graphParam, Deserializer deserializer)
+        protected override IEnumerable<Expression> GetFieldsDeserializeExpressions(Expression readerParam, Expression graphParam, Deserializer deserializer, out IEnumerable<ParameterExpression> additionalParams)
         {
             var simplifiedType = SimplifiersHelper.GetSimplifiedType(mSimplifier.GetType());
             
@@ -70,10 +71,13 @@ namespace CoolSerializer.V3
             
             var simplifiedParam = Expression.Parameter(simplifiedType, "simplifiedGraph");
             var simplifiedParamInit = Expression.Assign(simplifiedParam, Expression.New(simplifiedType));
-            var deserializeExpr =  base.GetFieldsDeserializeExpressions(readerParam, simplifiedParam, deserializer);
+            var deserializeExpr =  base.GetFieldsDeserializeExpressions(readerParam, simplifiedParam, deserializer, out additionalParams);
             var desimplify = Expression.Call(Expression.Constant(mSimplifier), desimpliyMethod, simplifiedParam);
             var assignment = GetAssignExpr(graphParam, desimplify);
-            return Expression.Block(new[] { simplifiedParam }, simplifiedParamInit, deserializeExpr, assignment);
+
+            additionalParams = additionalParams.Concat(new[] {simplifiedParam});
+            return new[] {simplifiedParamInit}.Concat(deserializeExpr).Concat(new []{assignment});
+            //return Expression.Block(new[] { simplifiedParam }, simplifiedParamInit, deserializeExpr, assignment);
         }
 
         protected override Expression GetCreateExpression()

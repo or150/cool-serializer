@@ -71,10 +71,11 @@ namespace CoolSerializer.V3
                 extraDataAssignment = CreateExtraDataInitializationExpression(retValParam, info);
             }
             var addToVisitedObjects = deserializer.GetAddToVisitedObjectsExpr(this, retValParam);
-            var fieldDeserializeExprs = this.GetFieldsDeserializeExpressions(readerParam, retValParam, deserializer);
+            IEnumerable<ParameterExpression> additionalParams;
+            var fieldDeserializeExprs = this.GetFieldsDeserializeExpressions(readerParam, retValParam, deserializer, out additionalParams);
 
-            var block = Expression.Block(new[] { retValParam },
-                new[] { retValAssignment, extraDataAssignment, addToVisitedObjects }.Concat(new[] { fieldDeserializeExprs }).Concat(new[] { retValParam }));
+            var block = Expression.Block(new[] { retValParam }.Concat(additionalParams),
+                new[] { retValAssignment, extraDataAssignment, addToVisitedObjects }.Concat(fieldDeserializeExprs).Concat(new[] { retValParam }));
             return block;
         }
 
@@ -86,7 +87,7 @@ namespace CoolSerializer.V3
             return Expression.Assign(Expression.MakeMemberAccess(graphParam, extraData), createExtraData);
         }
 
-        protected virtual Expression GetFieldsDeserializeExpressions(Expression readerParam, Expression graphParam, Deserializer deserializer)
+        protected virtual IEnumerable<Expression> GetFieldsDeserializeExpressions(Expression readerParam, Expression graphParam, Deserializer deserializer, out IEnumerable<ParameterExpression> additionalParams)
         {
             var fieldDeserializeExprs = new List<Expression>();
 
@@ -96,7 +97,8 @@ namespace CoolSerializer.V3
                 var assignment = field.GetSetExpression(graphParam, castedDes);
                 fieldDeserializeExprs.Add(assignment);
             }
-            return Expression.Block(fieldDeserializeExprs);
+            additionalParams = Enumerable.Empty<ParameterExpression>();
+            return fieldDeserializeExprs;
         }
 
         protected virtual Expression GetCreateExpression()
