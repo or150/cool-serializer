@@ -11,36 +11,36 @@ namespace CoolSerializer.V3
     {
         static void Main(string[] args)
         {
-            //var graph = new Graph()
-            //{
-            //    //Arr = new[] { 1, 3, 4, 5 },
-            //    //Coll = new ArrayList() { 4, 5, 6, 7, null, 9 },
-            //    S = new InnerStruct
-            //    {
-            //        I = 5,
-            //        L = 1
-            //    },
-            //    Z = new InnerGraphDerived()
-            //    {
-            //        H = 6,
-            //        Prop = "asd",
-            //        Surprise = null,
-            //        MyInt = 29
-            //    },
-            //};
-
-            //((InnerGraphDerived)graph.Z).Surprise = graph;
-
-
-            var graph = new Dictionary<int, object>
+            var graph = new Graph()
             {
-                {6,"6"},
-                {12,"SAD"},
-                {4, "but"},
-                {5, "true"},
-                {9, new MyBadClass(67, "89")}
+                //Arr = new[] { 1, 3, 4, 5 },
+                //Coll = new ArrayList() { 4, 5, 6, 7, null, 9 },
+                S = new InnerStruct
+                {
+                    I = 5,
+                    L = 1
+                },
+                Z = new InnerGraphDerived()
+                {
+                    H = 6,
+                    Prop = "asd",
+                    Surprise = null,
+                    MyInt = 29
+                },
             };
-            ((MyBadClass)graph[9]).InitBadClass((MyBadClass)graph[9]);
+
+            ((InnerGraphDerived)graph.Z).Surprise = graph;
+
+
+            //var graph = new Dictionary<int, object>
+            //{
+            //    {6,"6"},
+            //    {12,"SAD"},
+            //    {4, "but"},
+            //    {5, "true"},
+            //    {9, new MyBadClass(67, "89")}
+            //};
+            //((MyBadClass)graph[9]).InitBadClass((MyBadClass)graph[9]);
 
 
             //var graph = new Graph() {Z = new InnerGraph() {H = 9}};
@@ -191,22 +191,22 @@ namespace CoolSerializer.V3
 
     class MyGoodClass
     {
-        public int I { get; set; }
-        public string S { get; set; }
-        public MyBadClass BadBadClass { get; set; }
+        public int MyGoodI { get; set; }
+        public string MyGoodS { get; set; }
+        public MyBadClass MyBadBadClass { get; set; }
     }
 
     class MyNiceSimplifier : ISimpifier<MyBadClass, MyGoodClass>
     {
         public MyGoodClass Simplify(MyBadClass obj)
         {
-            return new MyGoodClass() { I = obj.I, S = obj.S, BadBadClass = obj.BadBadClass };
+            return new MyGoodClass() { MyGoodI = obj.I, MyGoodS = obj.S, MyBadBadClass = obj.BadBadClass };
         }
 
         public MyBadClass Desimplify(MyGoodClass simpleObj)
         {
-            var x=  new MyBadClass(simpleObj.I, simpleObj.S);
-            x.InitBadClass(simpleObj.BadBadClass);
+            var x=  new MyBadClass(simpleObj.MyGoodI, simpleObj.MyGoodS);
+            x.InitBadClass(simpleObj.MyBadBadClass);
             return x;
         }
     }

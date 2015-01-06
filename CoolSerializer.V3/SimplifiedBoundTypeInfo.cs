@@ -51,16 +51,20 @@ namespace CoolSerializer.V3
         {
             mSimplifier = simplifier;
         }
-        protected override IEnumerable<Expression> GetFieldsSerializeExpressions(Expression writerParam, Expression graphParam, Serializer serializer, out IEnumerable<ParameterExpression> additionalParams)
+        protected override void AddFieldsSerializeExpressions(MethodMutationHelper<Serializer> helper)
         {
             var simplfiyMethod = SimplifiersHelper.GetSimplifierType(mSimplifier.GetType()).GetMethod("Simplify");
-            var simplify = Expression.Call(Expression.Constant(mSimplifier), simplfiyMethod, graphParam);
+            var simplify = Expression.Call(Expression.Constant(mSimplifier), simplfiyMethod, helper.Graph);
             var simplifiedParam = Expression.Parameter(SimplifiersHelper.GetSimplifiedType(mSimplifier.GetType()), "simplifiedGraph");
             var assSimplified = Expression.Assign(simplifiedParam, simplify);
-            var serializeSimplified = base.GetFieldsSerializeExpressions(writerParam, simplifiedParam, serializer, out additionalParams);
             
-            additionalParams = additionalParams.Concat(new[] {simplifiedParam});
-            return new[] {assSimplified}.Concat(serializeSimplified);
+            helper.Parameters.Add(simplifiedParam);
+            helper.MethodBody.Add(assSimplified);
+
+            var oldGraph = helper.Graph;
+            helper.Graph = simplifiedParam;
+            base.AddFieldsSerializeExpressions(helper);
+            helper.Graph = oldGraph;
         }
 
         protected override IEnumerable<Expression> GetFieldsDeserializeExpressions(Expression readerParam, Expression graphParam, Deserializer deserializer, out IEnumerable<ParameterExpression> additionalParams)

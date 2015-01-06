@@ -47,17 +47,32 @@ namespace CoolSerializer.V3
         public Expression GetSerializeExpression(Expression graphParam, Expression writerParam, Serializer serializer)
         {
             var castedGraph = Expression.Variable(this.RealType, "castedGraph");
+            var helper = new MethodMutationHelper<Serializer>(serializer, castedGraph, writerParam);
+            helper.Parameters.Add(castedGraph);
+
             var castExpression = Expression.Assign(castedGraph, Expression.Convert(graphParam, this.RealType));
             var writeHeaderExpr = Expression.Call(writerParam, "WriteByte", null,
                 Expression.Constant((byte)ComplexHeader.Value));
             var writeTypeInfoExpr = Expression.Call(writerParam, "WriteTypeInfo", null, Expression.Constant(TypeInfo));
 
-            IEnumerable<ParameterExpression> additionalParams;
-            var fieldSerializeExprs = this.GetFieldsSerializeExpressions(writerParam, castedGraph, serializer, out additionalParams);
+            helper.MethodBody.Add(castExpression);
+            helper.MethodBody.Add(writeHeaderExpr);
+            helper.MethodBody.Add(writeTypeInfoExpr);
 
-            var block = Expression.Block(new[] { castedGraph }.Concat(additionalParams),
-                new Expression[] { castExpression, writeHeaderExpr, writeTypeInfoExpr }.Concat(fieldSerializeExprs));
+            AddFieldsSerializeExpressions(helper);
+
+            var block = Expression.Block(helper.Parameters,helper.MethodBody);
             return block;
+        }
+
+        protected virtual void AddFieldsSerializeExpressions(MethodMutationHelper<Serializer> helper)
+        {
+            foreach (var field in this.Fields)
+            {
+                var fieldAccessExpression = field.GetGetExpression(helper.Graph);
+                var serializeExpression = helper.Caller.GetRightSerializeMethod(helper.Writer, fieldAccessExpression, field);
+                helper.MethodBody.Add(serializeExpression);
+            }
         }
 
         public Expression GetDeserializeExpression(Expression readerParam, TypeInfo info, Deserializer deserializer)
@@ -105,23 +120,7 @@ namespace CoolSerializer.V3
         {
             return Expression.New(RealType);
         }
-
-        protected virtual IEnumerable<Expression> GetFieldsSerializeExpressions(Expression writerParam, Expression graphParam, Serializer serializer, out IEnumerable<ParameterExpression> additionalParams)
-        {
-            var fieldSerializeExprs = new List<Expression>();
-
-            foreach (var field in this.Fields)
-            {
-                var fieldAccessExpression = field.GetGetExpression(graphParam);
-                var serializeExpression = serializer.GetRightSerializeMethod(writerParam, fieldAccessExpression, field);
-                fieldSerializeExprs.Add(serializeExpression);
-            }
-            additionalParams = Enumerable.Empty<ParameterExpression>();
-            return fieldSerializeExprs;
-        }
-
     }
-
 
     public class EmptyBoundFieldInfo : IBoundFieldInfo
     {
