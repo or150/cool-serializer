@@ -81,11 +81,10 @@ namespace CoolSerializer.V3
             var helper = new DeserializationMutationHelper(deserializer, retValParam, readerParam);
             helper.Variables.Add(retValParam);
             
-            var creation = this.GetCreateExpression();
+            var creation = GetCreateExpression();
             var retValAssignment = Expression.Assign(retValParam, creation);
             helper.MethodBody.Add(retValAssignment);
 
-            //Expression extraDataAssignment = Expression.Empty();
             if (RealType.IsExtraDataHolder())
             {
                 var extraDataAssignment = CreateExtraDataInitializationExpression(retValParam, info);
@@ -93,15 +92,12 @@ namespace CoolSerializer.V3
             }
             var addToVisitedObjects = deserializer.GetAddToVisitedObjectsExpr(this, retValParam);
             helper.MethodBody.Add(addToVisitedObjects);
-            //IEnumerable<ParameterExpression> additionalParams;
-            this.GetFieldsDeserializeExpressions(helper);
-            
-            //helper.MethodBody.AddRange(fieldDeserializeExprs);
-            //helper.Variables.AddRange(additionalParams);
+
+
+            this.AddFieldsDeserializeExpressions(helper);
+
             helper.MethodBody.Add(retValParam);
 
-            //var block = Expression.Block(new[] { retValParam }.Concat(additionalParams),
-            //    new[] { retValAssignment, extraDataAssignment, addToVisitedObjects }.Concat(fieldDeserializeExprs).Concat(new[] { retValParam }));
             var block = Expression.Block(helper.Variables, helper.MethodBody);
             return block;
         }
@@ -114,18 +110,14 @@ namespace CoolSerializer.V3
             return Expression.Assign(Expression.MakeMemberAccess(graphParam, extraData), createExtraData);
         }
 
-        protected virtual void GetFieldsDeserializeExpressions(DeserializationMutationHelper helper)
+        protected virtual void AddFieldsDeserializeExpressions(DeserializationMutationHelper helper)
         {
-            //var fieldDeserializeExprs = new List<Expression>();
-
             foreach (var field in this.Fields)
             {
                 var castedDes = helper.Deserializer.GetRightDeserializeMethod(helper.Reader, field);
                 var assignment = field.GetSetExpression(helper.Graph, castedDes);
                 helper.MethodBody.Add(assignment);
             }
-            //additionalParams = Enumerable.Empty<ParameterExpression>();
-            //return fieldDeserializeExprs;
         }
 
         protected virtual Expression GetCreateExpression()

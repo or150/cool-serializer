@@ -118,7 +118,6 @@ namespace CoolSerializer.V3
             return new FieldInfo(rawType, p.Name);
         }
     }
-
     internal static class TypeInfoHelper<T>
     {
         private static bool mIsClass;

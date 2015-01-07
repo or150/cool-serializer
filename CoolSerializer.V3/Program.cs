@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 
 namespace CoolSerializer.V3
 {
@@ -48,12 +49,18 @@ namespace CoolSerializer.V3
         }
         static void Main(string[] args)
         {
+            var random = new Random();
+            var asd = random.Next(int.MaxValue/2, int.MaxValue)*random.Next(int.MaxValue/2, int.MaxValue);
             //var graph = CreateGraph();
-
-            var graph = Enumerable.Range(0, 100).Select((x) => CreateGraph())
-                .Concat<object>(Enumerable.Range(0, 100).Select(x => CreateMyBadClass())).ToList();
+            //var graph = Enumerable.Range(0, 150).Select((x) => CreateGraph())
+            //    .Concat<object>(Enumerable.Range(0, 150).Select(x => CreateMyBadClass()))
+            //    .Concat(Enumerable.Range(0, 150).Select(x => Guid.NewGuid()).Cast<object>())
+            //    .Concat(Enumerable.Range(0, 150).Select(x => new DateTime(random.Next(ushort.MaxValue, int.MaxValue / 2) * (long)random.Next(int.MaxValue / 2, int.MaxValue))).Cast<object>())
+            //    .Concat(Enumerable.Range(0, 150).Select(x=> Guid.NewGuid().ToString("B"))).ToList();
             //var graph = CreateMyBadClass();
 
+            var graph = new object[] {CreateGraph(), CreateMyBadClass(), null};
+            graph[2] = graph;
 
 
             //var graph = new Graph() {Z = new InnerGraph() {H = 9}};
@@ -110,7 +117,7 @@ namespace CoolSerializer.V3
             //    sWrite.Position = 0;
             //}
 
-            var count = 1000 * 1000;
+            var count = 1000 * 10;
 
             var time = Stopwatch.StartNew();
             //for (int i = 0; i < count; i++)
@@ -123,6 +130,7 @@ namespace CoolSerializer.V3
             {
                 s.Position = 0;
                 var obj = deserializer.Deserialize(s);
+                obj = Volatile.Read(ref obj);
             }
 
             time.Stop();

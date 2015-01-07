@@ -49,35 +49,53 @@ namespace CoolSerializer.V3
         }
         public Expression GetDeserializeExpression(Expression readerParam,TypeInfo info, Deserializer deserializer)
         {
-            var countParam = Expression.Parameter(typeof(int), "count");
-            var readInt32 = Expression.Assign(countParam, Expression.Call(readerParam, "ReadInt32", null));
             var retValParam = Expression.Variable(this.RealType, "retVal");
-            var creation = this.GetCreateExpression(countParam);
-            var retValAssignment = Expression.Assign(retValParam, creation);
-            var addToVisitedObjects = deserializer.GetAddToVisitedObjectsExpr(this, retValParam);
-            var fieldDeserializeExprs = this.GetFieldsDeserializeExpressions(readerParam, retValParam, deserializer,countParam);
+            var helper = new DeserializationMutationHelper(deserializer, retValParam, readerParam);
+            helper.Variables.Add(retValParam);
 
-            var block = Expression.Block(new[] { retValParam,countParam },
-                new[] { readInt32, retValAssignment, addToVisitedObjects }.Concat(fieldDeserializeExprs).Concat(new[] { retValParam }));
+            var creation = GetCreateExpression(helper);
+            var retValAssignment = Expression.Assign(retValParam, creation);
+            helper.MethodBody.Add(retValAssignment);
+
+
+            var addToVisitedObjects = deserializer.GetAddToVisitedObjectsExpr(this, retValParam);
+            helper.MethodBody.Add(addToVisitedObjects);
+
+            GetFieldsDeserializeExpressions(helper);
+
+            //helper.MethodBody.AddRange(fieldDeserializeExprs);
+            helper.MethodBody.Add(retValParam);
+
+            var block = Expression.Block(helper.Variables, helper.MethodBody);
             return block;
         }
 
-        public IEnumerable<Expression> GetFieldsDeserializeExpressions(Expression readerParam, Expression graphParam,Deserializer deserializer, Expression countParam)
+        public void GetFieldsDeserializeExpressions(DeserializationMutationHelper helper)
         {
             var iParam = Expression.Parameter(typeof (int), "i");
+
             var range = new Func<int, int, IEnumerable<int>>(Enumerable.Range).Method;
-            var castedDes = deserializer.GetRightDeserializeMethod(readerParam, mElementInfo);
-            var collectionAdd = mElementInfo.GetSetExpression(graphParam, castedDes, (Expression) iParam);
-            var iteration = ForEach(typeof (int), Expression.Call(range, Expression.Constant(0), countParam), iParam, collectionAdd);
-            var block = Expression.Block(new[] {iParam}, iteration);
-            yield return block;
+            var castedDes = helper.Deserializer.GetRightDeserializeMethod(helper.Reader, mElementInfo);
+            var collectionAdd = mElementInfo.GetSetExpression(helper.Graph, castedDes, (Expression) iParam);
+            var iteration = ForEach(typeof(int), Expression.Call(range, Expression.Constant(0), (Expression)helper.ExtraData["CollectionCountParam"]), iParam, collectionAdd);
+
+            helper.Variables.Add(iParam);
+            helper.MethodBody.Add(iteration);
+            //var block = Expression.Block(iteration);
+            //yield return iteration;
         }
 
-        private Expression GetCreateExpression(Expression count)
+        private Expression GetCreateExpression(/*Expression count*/DeserializationMutationHelper helper)
         {
+            var countParam = Expression.Parameter(typeof(int), "count");
+            var readInt32 = Expression.Assign(countParam, Expression.Call(helper.Reader, "ReadInt32", null));
+            helper.Variables.Add(countParam);
+            helper.MethodBody.Add(readInt32);
+            helper.ExtraData["CollectionCountParam"] = countParam;
+
             if (RealType.IsArray)
             {
-                return Expression.NewArrayBounds(mElementInfo.RealType, count);
+                return Expression.NewArrayBounds(mElementInfo.RealType, countParam);
             }
             return Expression.New(RealType);
         }

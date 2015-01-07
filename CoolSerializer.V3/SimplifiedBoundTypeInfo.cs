@@ -68,7 +68,7 @@ namespace CoolSerializer.V3
             helper.Graph = oldGraph;
         }
 
-        protected override void GetFieldsDeserializeExpressions(DeserializationMutationHelper helper)
+        protected override void AddFieldsDeserializeExpressions(DeserializationMutationHelper helper)
         {
             var simplifiedType = SimplifiersHelper.GetSimplifiedType(mSimplifier.GetType());
             
@@ -82,7 +82,7 @@ namespace CoolSerializer.V3
 
             var oldGraph = helper.Graph;
             helper.Graph = simplifiedParam;
-            base.GetFieldsDeserializeExpressions(helper);
+            base.AddFieldsDeserializeExpressions(helper);
             helper.Graph = oldGraph;
 
             var desimplify = Expression.Call(Expression.Constant(mSimplifier), desimpliyMethod, simplifiedParam);

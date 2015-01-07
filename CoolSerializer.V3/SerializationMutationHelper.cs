@@ -10,14 +10,18 @@ namespace CoolSerializer.V3
             Graph = graph;
             Variables = new List<ParameterExpression>();
             MethodBody = new List<Expression>();
+            ExtraData = new Dictionary<string, object>();
         }
         public Expression Graph { get; set; }
         public List<ParameterExpression> Variables { get; set; }
         public List<Expression> MethodBody { get; set; }
+
+        public Dictionary<string, object> ExtraData { get; private set; }
     }
     public class SerializationMutationHelper : MutationHelper
     {
-        public SerializationMutationHelper(Serializer serializer, Expression graph, Expression writer) : base(graph)
+        public SerializationMutationHelper(Serializer serializer, Expression graph, Expression writer)
+            : base(graph)
         {
             Serializer = serializer;
             Writer = writer;
@@ -29,7 +33,8 @@ namespace CoolSerializer.V3
 
     public class DeserializationMutationHelper : MutationHelper
     {
-        public DeserializationMutationHelper(Deserializer deserializer, Expression graph, Expression reader) : base(graph)
+        public DeserializationMutationHelper(Deserializer deserializer, Expression graph, Expression reader)
+            : base(graph)
         {
             Deserializer = deserializer;
             Reader = reader;
