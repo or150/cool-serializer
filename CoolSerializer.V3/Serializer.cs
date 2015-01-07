@@ -13,10 +13,9 @@ namespace CoolSerializer.V3
         private readonly BasicSimplifersProvider mBasicSimplifersProvider;
         private readonly TypeInfoProvider mProvider;
         private readonly IBoundTypeInfoFactory mBinder;
-        private readonly ConcurrentDictionary<TypeInfo, Delegate> mSerializeMethods = new ConcurrentDictionary<TypeInfo, Delegate>(TypeInfoEqualityComparer.Instance);
+        private readonly ConcurrentDictionary<Tuple<Type, TypeInfo>, Delegate> mSerializeMethods = new ConcurrentDictionary<Tuple<Type, TypeInfo>, Delegate>(TypeAndTypeInfoEqualityComparer.Instance);
         
         private Dictionary<object, int> mVisitedObjects;
-
         public Serializer()
         {
             mBasicSimplifersProvider = new BasicSimplifersProvider();
@@ -112,7 +111,7 @@ namespace CoolSerializer.V3
                 return;
             }
 
-            var serializeMethod = (Action<IDocumentWriter, T>)mSerializeMethods.GetOrAdd(info, i => GetSerializeExpression<T>(i).Compile());
+            var serializeMethod = (Action<IDocumentWriter, T>)mSerializeMethods.GetOrAdd(Tuple.Create(typeof(T),info), i => GetSerializeExpression<T>(i.Item2).Compile());
             serializeMethod(writer, graph);
         }
 

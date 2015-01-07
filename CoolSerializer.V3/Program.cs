@@ -28,6 +28,11 @@ namespace CoolSerializer.V3
                     Surprise = null,
                     MyInt = 29
                 },
+                StructInObj = new InnerStruct()
+                {
+                    I = 9,
+                    L = 4
+                }
             };
 
             ((InnerGraphDerived)graph.Z).Surprise = graph;
@@ -51,7 +56,7 @@ namespace CoolSerializer.V3
         {
             var random = new Random();
             var asd = random.Next(int.MaxValue/2, int.MaxValue)*random.Next(int.MaxValue/2, int.MaxValue);
-            //var graph = CreateGraph();
+            var graph = CreateGraph();
             //var graph = Enumerable.Range(0, 150).Select((x) => CreateGraph())
             //    .Concat<object>(Enumerable.Range(0, 150).Select(x => CreateMyBadClass()))
             //    .Concat(Enumerable.Range(0, 150).Select(x => Guid.NewGuid()).Cast<object>())
@@ -59,8 +64,8 @@ namespace CoolSerializer.V3
             //    .Concat(Enumerable.Range(0, 150).Select(x=> Guid.NewGuid().ToString("B"))).ToList();
             //var graph = CreateMyBadClass();
 
-            var graph = new object[] {CreateGraph(), CreateMyBadClass(), null};
-            graph[2] = graph;
+            //var graph = new object[] {CreateGraph(), CreateMyBadClass(), null};
+            //graph[2] = graph;
 
 
             //var graph = new Graph() {Z = new InnerGraph() {H = 9}};
@@ -175,7 +180,7 @@ namespace CoolSerializer.V3
         public int Y { get; set; }
         public InnerGraph Z { get; set; }
         public InnerStruct S { get; set; }
-
+        public object StructInObj { get; set; }
         public float[] Arr2 { get; set; }
         public ExtraData ExtraData { get; set; }
     }

@@ -11,7 +11,7 @@ namespace CoolSerializer.V3
     public class Deserializer
     {
         readonly IBoundTypeInfoFactory mBinder = new TypeInfoBinder(new BasicSimplifersProvider());
-        readonly ConcurrentDictionary<TypeInfo,Delegate> mDeserializeMethods = new ConcurrentDictionary<TypeInfo, Delegate>(TypeInfoEqualityComparer.Instance);
+        readonly ConcurrentDictionary<Tuple<Type, TypeInfo>, Delegate> mDeserializeMethods = new ConcurrentDictionary<Tuple<Type, TypeInfo>, Delegate>(TypeAndTypeInfoEqualityComparer.Instance);
         private List<object> mVisitedObjects;
 
         public object Deserialize(Stream s)
@@ -96,7 +96,7 @@ namespace CoolSerializer.V3
         private T DeserializeValue<T>(IDocumentReader reader)
         {
             var info = reader.ReadTypeInfo();
-            var deserializeMethod = (Func<IDocumentReader, T>)mDeserializeMethods.GetOrAdd(info, i => GetDeserializeExpression<T>(i).Compile());
+            var deserializeMethod = (Func<IDocumentReader, T>)mDeserializeMethods.GetOrAdd(Tuple.Create(typeof(T),info), i => GetDeserializeExpression<T>(i.Item2).Compile());
             return deserializeMethod(reader);
         }
 
@@ -136,6 +136,29 @@ namespace CoolSerializer.V3
                 .First(m => m.ReturnType == fieldType.RealType);
             var deserializeExpr = Expression.Call(readerParam, deserializeMethod);
             return deserializeExpr;
+        }
+    }
+
+    internal class TypeAndTypeInfoEqualityComparer : IEqualityComparer<Tuple<Type,TypeInfo>>
+    {
+        public static TypeAndTypeInfoEqualityComparer Instance { get; private set; }
+
+        static TypeAndTypeInfoEqualityComparer()
+        {
+            Instance = new TypeAndTypeInfoEqualityComparer();
+        }
+        private TypeAndTypeInfoEqualityComparer()
+        {
+
+        }
+        public bool Equals(Tuple<Type, TypeInfo> x, Tuple<Type, TypeInfo> y)
+        {
+            return ReferenceEquals(x.Item1,y.Item1) && x.Item2.Guid == y.Item2.Guid;
+        }
+
+        public int GetHashCode(Tuple<Type, TypeInfo> obj)
+        {
+            return /*obj.Item1.GetHashCode() ^ */obj.Item2.Guid.GetHashCode();
         }
     }
 
