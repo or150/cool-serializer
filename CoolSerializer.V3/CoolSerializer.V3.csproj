@@ -46,6 +46,7 @@
     <Compile Include="BoundCollectionTypeInfo.cs" />
     <Compile Include="BoundTypeInfo.cs" />
     <Compile Include="Deserializer.cs" />
+    <Compile Include="ExpressionHelpers.cs" />
     <Compile Include="GuidMarshaler.cs" />
     <Compile Include="ISimplifersProvider.cs" />
     <Compile Include="KVPSimplifier.cs" />

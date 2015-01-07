@@ -41,7 +41,7 @@ namespace CoolSerializer.V3
 
         public Type RealType { get; private set; }
         public TypeInfo TypeInfo { get; private set; }
-        public IBoundFieldInfo[] Fields { get; private set; }
+        public virtual IBoundFieldInfo[] Fields { get; private set; }
 
 
         public Expression GetSerializeExpression(Expression graphParam, Expression writerParam, Serializer serializer)
