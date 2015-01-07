@@ -89,13 +89,9 @@ namespace CoolSerializer.V3
             var assignment = GetAssignExpr(helper.Graph, desimplify);
 
             helper.MethodBody.Add(assignment);
-
-            //additionalParams = additionalParams.Concat(new[] {simplifiedParam});
-            //return new[] {simplifiedParamInit}.Concat(deserializeExpr).Concat(new []{assignment});
-            //return Expression.Block(new[] { simplifiedParam }, simplifiedParamInit, deserializeExpr, assignment);
         }
 
-        protected override Expression GetCreateExpression()
+        protected override Expression GetCreateExpression(DeserializationMutationHelper helper)
         {
             if (this.TypeInfo.IsAlwaysByVal)
             {

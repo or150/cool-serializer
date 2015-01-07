@@ -81,7 +81,7 @@ namespace CoolSerializer.V3
             var helper = new DeserializationMutationHelper(deserializer, retValParam, readerParam);
             helper.Variables.Add(retValParam);
             
-            var creation = GetCreateExpression();
+            var creation = GetCreateExpression(helper);
             var retValAssignment = Expression.Assign(retValParam, creation);
             helper.MethodBody.Add(retValAssignment);
 
@@ -120,7 +120,7 @@ namespace CoolSerializer.V3
             }
         }
 
-        protected virtual Expression GetCreateExpression()
+        protected virtual Expression GetCreateExpression(DeserializationMutationHelper helper)
         {
             return Expression.New(RealType);
         }

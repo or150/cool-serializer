@@ -61,16 +61,15 @@ namespace CoolSerializer.V3
             var addToVisitedObjects = deserializer.GetAddToVisitedObjectsExpr(this, retValParam);
             helper.MethodBody.Add(addToVisitedObjects);
 
-            GetFieldsDeserializeExpressions(helper);
+            this.AddFieldsDeserializeExpressions(helper);
 
-            //helper.MethodBody.AddRange(fieldDeserializeExprs);
             helper.MethodBody.Add(retValParam);
 
             var block = Expression.Block(helper.Variables, helper.MethodBody);
             return block;
         }
 
-        public void GetFieldsDeserializeExpressions(DeserializationMutationHelper helper)
+        public void AddFieldsDeserializeExpressions(DeserializationMutationHelper helper)
         {
             var iParam = Expression.Parameter(typeof (int), "i");
 
@@ -81,11 +80,9 @@ namespace CoolSerializer.V3
 
             helper.Variables.Add(iParam);
             helper.MethodBody.Add(iteration);
-            //var block = Expression.Block(iteration);
-            //yield return iteration;
         }
 
-        private Expression GetCreateExpression(/*Expression count*/DeserializationMutationHelper helper)
+        private Expression GetCreateExpression(DeserializationMutationHelper helper)
         {
             var countParam = Expression.Parameter(typeof(int), "count");
             var readInt32 = Expression.Assign(countParam, Expression.Call(helper.Reader, "ReadInt32", null));
@@ -100,30 +97,42 @@ namespace CoolSerializer.V3
             return Expression.New(RealType);
         }
 
-        public IEnumerable<Expression> GetFieldsSerializeExpressions(Expression writerParam, Expression graphParam, Serializer serializer)
+        public void AddFieldsSerializeExpressions(SerializationMutationHelper helper)
         {
             var countPropertyInfo = (mElementInfo.IsGeneric ? typeof(ICollection<>).MakeGenericType(mElementInfo.RealType) : typeof(ICollection))
                 .GetProperty("Count", BindingFlags.Instance | BindingFlags.Public);
-            var count = Expression.MakeMemberAccess(graphParam,
-                countPropertyInfo);
-            yield return Expression.Call(writerParam, "WriteInt32", null, count);
+            var count = Expression.MakeMemberAccess(helper.Graph, countPropertyInfo);
+            var writeCount = Expression.Call(helper.Writer, "WriteInt32", null, count);
+            helper.MethodBody.Add(writeCount);
+
+
             var elementParam = Expression.Variable(mElementInfo.RealType, "element");
-            var serializeExpression = serializer.GetRightSerializeMethod(writerParam, elementParam, mElementInfo);
-            yield return Expression.Block(new[]{elementParam}, ForEach(mElementInfo.IsGeneric ? mElementInfo.RealType : null, graphParam, elementParam, serializeExpression));
+            var serializeExpression = helper.Serializer.GetRightSerializeMethod(helper.Writer, elementParam, mElementInfo);
+            
+            var forEach = ForEach(mElementInfo.IsGeneric ? mElementInfo.RealType : null, helper.Graph, elementParam, serializeExpression);
+
+            helper.Variables.Add(elementParam);
+            helper.MethodBody.Add(forEach);
         }
 
         public Expression GetSerializeExpression(Expression graphParam, Expression writerParam, Serializer serializer)
         {
             var castedGraph = Expression.Variable(this.RealType, "castedGraph");
+            var helper = new SerializationMutationHelper(serializer, castedGraph, writerParam);
+            helper.Variables.Add(castedGraph);
+
             var castExpression = Expression.Assign(castedGraph, Expression.Convert(graphParam, this.RealType));
             var writeHeaderExpr = Expression.Call(writerParam, "WriteByte", null,
                 Expression.Constant((byte)ComplexHeader.Value));
             var writeTypeInfoExpr = Expression.Call(writerParam, "WriteTypeInfo", null, Expression.Constant(TypeInfo));
 
-            var fieldSerializeExprs = this.GetFieldsSerializeExpressions(writerParam, castedGraph, serializer);
+            helper.MethodBody.Add(castExpression);
+            helper.MethodBody.Add(writeHeaderExpr);
+            helper.MethodBody.Add(writeTypeInfoExpr);
 
-            var block = Expression.Block(new[] { castedGraph },
-                new Expression[] { castExpression, writeHeaderExpr, writeTypeInfoExpr }.Concat(fieldSerializeExprs));
+            AddFieldsSerializeExpressions(helper);
+
+            var block = Expression.Block(helper.Variables, helper.MethodBody);
             return block;
         }
 
