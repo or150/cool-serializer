@@ -62,7 +62,7 @@ namespace CoolSerializer.V3
         {
             var info = CreateTypeInfo(type);
             var fields = info.Fields.Union(arg.Fields, FieldEqualityComparer.Instance).ToArray();
-            return new TypeInfo(info.Guid,info.Name,info.RawType,fields,info.IsAlwaysByVal);
+            return new TypeInfo(info.Guid, arg.Name, arg.RawType, fields, arg.IsAlwaysByVal);
         }
         private TypeInfo CreateTypeInfo(Type t)
         {
@@ -70,7 +70,10 @@ namespace CoolSerializer.V3
             FieldInfo[] fields = null;
             if (rawType == FieldType.Collection)
             {
-                fields = new FieldInfo[0];
+                fields = new FieldInfo[]
+                {
+                    new FieldInfo((t.GetElementTypeEx() ?? typeof(object)).GetRawType(),"Item"), 
+                };
             }
             else
             {
@@ -93,12 +96,11 @@ namespace CoolSerializer.V3
         {
             return type
                 .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(FieldIsNotExtraData).Select(CreateFieldInfo).ToArray();
+                .Where(f=>FieldIsNotExtraData(f,type)).Select(CreateFieldInfo).ToArray();
         }
 
-        private bool FieldIsNotExtraData(PropertyInfo arg)
+        private bool FieldIsNotExtraData(PropertyInfo arg, Type type)
         {
-            var type = arg.DeclaringType;
             var extraDataType = typeof (IExtraDataHolder);
             if (!extraDataType.IsAssignableFrom(type))
             {

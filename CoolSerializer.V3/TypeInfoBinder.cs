@@ -7,7 +7,7 @@ namespace CoolSerializer.V3
 {
     public interface IBoundTypeInfoFactory
     {
-        IBoundTypeInfo Provide(TypeInfo info);
+        IBoundTypeInfo Provide<T>(TypeInfo info);
     }
 
     public interface IBoundFieldInfoProvider
@@ -52,17 +52,18 @@ namespace CoolSerializer.V3
             var fieldsProvider = new BoundFieldInfoProvider();
             mProviders = new List<IBoundTypeInfoProvider>
             {
+                new UnknownObjectTypeInfoProvider(fieldsProvider),
                 new CollecionBoundTypeInfoProvider(),
                 new SimplifiedBoundTypeInfoProvider(simplifersProvider,fieldsProvider),
                 new BasicBoundTypeInfoProvider(fieldsProvider)
             };
         }
-        public IBoundTypeInfo Provide(TypeInfo info)
+        public IBoundTypeInfo Provide<T>(TypeInfo info)
         {
             IBoundTypeInfo boundInfo;
             foreach (var provider in mProviders)
             {
-                if (provider.TryProvide(info, out boundInfo))
+                if (provider.TryProvide<T>(info, out boundInfo))
                 {
                     return boundInfo;
                 }
@@ -71,6 +72,7 @@ namespace CoolSerializer.V3
             throw new NotImplementedException("Unk types are not implemented atm");
         }
     }
+
     public interface IBoundTypeInfo
     {
         Type RealType { get; }
@@ -87,6 +89,6 @@ namespace CoolSerializer.V3
     }
     public interface IBoundTypeInfoProvider
     {
-        bool TryProvide(TypeInfo info, out IBoundTypeInfo boundTypeInfo);
+        bool TryProvide<T>(TypeInfo info, out IBoundTypeInfo boundTypeInfo);
     }
 }

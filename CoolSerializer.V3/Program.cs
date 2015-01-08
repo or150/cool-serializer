@@ -4,11 +4,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 
 namespace CoolSerializer.V3
 {
-    class Program
+    public class Program
     {
         private static Graph CreateGraph()
         {
@@ -52,11 +53,30 @@ namespace CoolSerializer.V3
             ((MyBadClass)graph[9]).InitBadClass((MyBadClass)graph[9]);
             return graph;
         }
+
+        public abstract class ShekerBase// : IExtraDataHolder
+        {
+            //public ExtraData ExtraData { get; set; }
+            public abstract int Number { get; set; }
+        }
+
+        //public class Sheker1 : ShekerBase
+        //{
+        //    public int Number { get; set; }
+        //}
+
+        public class Sheker2 : ShekerBase
+        {
+            public string Text { get; set; }
+            public override int Number { get; set; }
+        }
         static void Main(string[] args)
         {
-            var random = new Random();
-            var asd = random.Next(int.MaxValue/2, int.MaxValue)*random.Next(int.MaxValue/2, int.MaxValue);
-            var graph = CreateGraph();
+            //var graph = new List<ShekerBase> { new Sheker1() { Number = 8 }, new Sheker2() { Text = "wasdwasd" } };
+
+            //var graph = CreateGraph();
+
+            //var random = new Random();
             //var graph = Enumerable.Range(0, 150).Select((x) => CreateGraph())
             //    .Concat<object>(Enumerable.Range(0, 150).Select(x => CreateMyBadClass()))
             //    .Concat(Enumerable.Range(0, 150).Select(x => Guid.NewGuid()).Cast<object>())
@@ -96,11 +116,11 @@ namespace CoolSerializer.V3
             //}).ToList();
 
             var ser = new Serializer();
-            using (var sWrite = File.Open(@"..\asd.txt", FileMode.Create))
-            {
-                ser.Serialize(sWrite, graph);
-                sWrite.Position = 0;
-            }
+            //using (var sWrite = File.Open(@"..\asd.txt", FileMode.Create))
+            //{
+            //    ser.Serialize(sWrite, graph);
+            //    sWrite.Position = 0;
+            //}
 
             var deserializer = new Deserializer();
             var s = new MemoryStream();
@@ -116,11 +136,11 @@ namespace CoolSerializer.V3
             s.Position = 0;
             ser.Serialize(s, myObj);
 
-            //using (var sWrite = File.Open(@"..\asd.txt", FileMode.Create))
-            //{
-            //    ser.Serialize(sWrite, myObj);
-            //    sWrite.Position = 0;
-            //}
+            using (var sWrite = File.Open(@"..\asd.txt", FileMode.Create))
+            {
+                ser.Serialize(sWrite, myObj);
+                sWrite.Position = 0;
+            }
 
             var count = 1000 * 10;
 

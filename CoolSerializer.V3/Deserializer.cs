@@ -102,7 +102,7 @@ namespace CoolSerializer.V3
 
         private Expression<Func<IDocumentReader, T>> GetDeserializeExpression<T>(TypeInfo info)
         {
-            var boundInfo = mBinder.Provide(info);
+            var boundInfo = mBinder.Provide<T>(info);
             var readerParam = Expression.Parameter(typeof(IDocumentReader), "reader");
             var block = boundInfo.GetDeserializeExpression(readerParam,info, this);
             if (boundInfo.RealType.IsValueType != typeof (T).IsValueType)

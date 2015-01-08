@@ -19,7 +19,7 @@ namespace CoolSerializer.V3
             mFieldsProvider = fieldsProvider;
         }
 
-        public bool TryProvide(TypeInfo info, out IBoundTypeInfo boundTypeInfo)
+        public bool TryProvide<T>(TypeInfo info, out IBoundTypeInfo boundTypeInfo)
         {
             object simplifier;
             var realType = Type.GetType(info.Name);

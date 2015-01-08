@@ -71,6 +71,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>IDocumentWriter.tt</DependentUpon>
     </Compile>
+    <Compile Include="UnknownObjectTypeInfoProvider.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

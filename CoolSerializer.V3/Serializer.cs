@@ -141,7 +141,7 @@ namespace CoolSerializer.V3
             //    SerializeComplex(graph.ComplexField);
             //}
 
-            var boundInfo = mBinder.Provide(info);
+            var boundInfo = mBinder.Provide<T>(info);
             var writerParam = Expression.Parameter(typeof(IDocumentWriter), "writer");
             var graphParam = Expression.Parameter(typeof(T), "graph");
             var block = boundInfo.GetSerializeExpression(graphParam, writerParam, this);

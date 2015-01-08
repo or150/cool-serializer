@@ -10,7 +10,7 @@ namespace CoolSerializer.V3
 
     class CollecionBoundTypeInfoProvider : IBoundTypeInfoProvider
     {
-        public bool TryProvide(TypeInfo info, out IBoundTypeInfo boundTypeInfo)
+        public bool TryProvide<T>(TypeInfo info, out IBoundTypeInfo boundTypeInfo)
         {
             boundTypeInfo = null;
             if (info.RawType != FieldType.Collection)
